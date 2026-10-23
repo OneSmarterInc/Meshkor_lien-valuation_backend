@@ -1,0 +1,25 @@
+# Spec §4: query-time market filter. Loaders store every state; queries and
+# reports use these lists. Border zip3 values must be confirmed against a
+# zip3 map before use (Spec §4).
+first_market:
+  name: Ohio + border metros
+  state: OH
+  ohio_zip3:
+    range: [430, 459]
+  border_zip3:
+    - {metro: Cincinnati / Northern Kentucky, state: KY, zip3: ["410"]}
+    - {metro: Cincinnati / SE Indiana, state: IN, zip3: ["470"]}
+    - {metro: Toledo / Monroe, state: MI, zip3: ["481", "482"]}
+    - {metro: Wheeling / Steubenville, state: WV, zip3: ["260"]}
+    - {metro: Parkersburg / Marietta, state: WV, zip3: ["261"]}
+    - {metro: Huntington / Ironton / Portsmouth, state: "WV,KY", zip3: ["255", "256", "257", "411", "412"]}
+    - {metro: Youngstown / Sharon, state: PA, zip3: ["160", "161"]}
+  # Medicare physician fee schedule locality for Ohio, confirmed from
+  # GPCI2026.csv and 26LOCCO.csv in RVU26D (statewide, all counties).
+  mpfs_locality: {carrier: "15202", locality: "00"}
+  # HCRIS / CCN state codes for Ohio (HCRIS_STATE_CODES.csv).
+  ccn_state_codes: ["36", "72"]
+  # Spec §8.4: three named Ohio hospitals for the DRG 470 test (CCNs).
+  # Defaults: Cleveland Clinic, Miami Valley Hospital (Dayton), Ohio State
+  # University Hospitals. Replace with the hospitals you want.
+  drg470_test_ccns: ["360180", "360051", "360085"]

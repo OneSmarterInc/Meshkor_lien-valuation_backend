@@ -1,0 +1,42 @@
+{
+  "table": "ref_quality_asc",
+  "output": "ref\\ref_quality_asc.parquet",
+  "rows": 68532,
+  "columns": [
+    "facility_id",
+    "npi",
+    "facility_name",
+    "city",
+    "state",
+    "zip5",
+    "data_year",
+    "measure_id",
+    "score",
+    "score_value",
+    "performance_category",
+    "footnote",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-09",
+      "file": "CARECOMPARE/2026-10",
+      "sha256": "2aac9fdd370d81668aed5c9fb83a54cbdb76c110d219cdfddc604844d189647a",
+      "size_bytes": 309491125,
+      "page": "https://data.cms.gov/provider-data/topics/hospitals",
+      "members": [
+        "4jcv-atw7_2025-12-16_ASC_Facility.csv"
+      ],
+      "rows": 68532
+    }
+  ],
+  "started_at": "2026-10-21T12:25:13+00:00",
+  "finished_at": "2026-10-21T12:25:13+00:00",
+  "seconds": 0.16,
+  "warnings": [],
+  "skipped": []
+}

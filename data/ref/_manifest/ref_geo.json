@@ -1,0 +1,148 @@
+{
+  "table": "ref_geo",
+  "output": "ref\\ref_geo.parquet",
+  "rows": 1021553,
+  "columns": [
+    "zip5",
+    "geo_type",
+    "geoid",
+    "city",
+    "state",
+    "res_ratio",
+    "bus_ratio",
+    "oth_ratio",
+    "tot_ratio",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2024Q1",
+      "file": "HUD/2024Q1",
+      "sha256": "608fbacc8bf8309820b98e374c4c6ec13e7fb8da946d78d420f644e5813c25f6",
+      "size_bytes": 4421384,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_032024.xlsx",
+        "ZIP-COUNTY_032024.xlsx"
+      ],
+      "rows": 102093
+    },
+    {
+      "period": "2024Q2",
+      "file": "HUD/2024Q2",
+      "sha256": "38a7348936adfd2a58f9823f4e63d380f5364ba97cf705f68c9ffd930edfc60b",
+      "size_bytes": 4417459,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_062024.xlsx",
+        "ZIP-COUNTY_062024.xlsx"
+      ],
+      "rows": 102044
+    },
+    {
+      "period": "2024Q3",
+      "file": "HUD/2024Q3",
+      "sha256": "d14e1d3267175dec350c493b01ed0a35f78e2bf34661326b66eb7993a2084374",
+      "size_bytes": 4426934,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_092024.xlsx",
+        "ZIP-COUNTY_092024.xlsx"
+      ],
+      "rows": 102146
+    },
+    {
+      "period": "2024Q4",
+      "file": "HUD/2024Q4",
+      "sha256": "7dc6254b77ed582ffcab5d5c7b1503d182d5d095f61ca42c4923448344e7f7f4",
+      "size_bytes": 4426693,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_122024.xlsx",
+        "ZIP-COUNTY_122024.xlsx"
+      ],
+      "rows": 102132
+    },
+    {
+      "period": "2025Q1",
+      "file": "HUD/2025Q1",
+      "sha256": "bf49ecf00d902cdc2a8e3719b982bff693b49620c5e1f27ca8a041a46ff5dba7",
+      "size_bytes": 4429579,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_032025.xlsx",
+        "ZIP-COUNTY_032025.xlsx"
+      ],
+      "rows": 102147
+    },
+    {
+      "period": "2025Q2",
+      "file": "HUD/2025Q2",
+      "sha256": "badf8809ada856706dcaf4dfbf20b87d0d9c42d126be8728fc20132ac674dfee",
+      "size_bytes": 4435225,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_062025.xlsx",
+        "ZIP-COUNTY_062025.xlsx"
+      ],
+      "rows": 102192
+    },
+    {
+      "period": "2025Q3",
+      "file": "HUD/2025Q3",
+      "sha256": "578c2c160fd8da3c4999a890cecc2da75d73ed85888e1f0ffdc6d510c006cd48",
+      "size_bytes": 4437251,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_092025.xlsx",
+        "ZIP-COUNTY_092025.xlsx"
+      ],
+      "rows": 102208
+    },
+    {
+      "period": "2025Q4",
+      "file": "HUD/2025Q4",
+      "sha256": "add03ab8c2767eccdc6759bf780cc5a49a5dd2b6248f61f4738dc81055dce572",
+      "size_bytes": 4436522,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_122025.xlsx",
+        "ZIP-COUNTY_122025.xlsx"
+      ],
+      "rows": 102205
+    },
+    {
+      "period": "2026Q1",
+      "file": "HUD/2026Q1",
+      "sha256": "95f54243886cc5ba3fd3e2bd9820c4b41eaa4d8087845d3ad1704e985829993d",
+      "size_bytes": 4438182,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_032026.xlsx",
+        "ZIP-COUNTY_032026.xlsx"
+      ],
+      "rows": 102187
+    },
+    {
+      "period": "2026Q2",
+      "file": "HUD/2026Q2",
+      "sha256": "8554296b3a708d29b4bef591104a53687798668817be8b5643311ea013889d9d",
+      "size_bytes": 4440085,
+      "page": "https://www.huduser.gov/portal/datasets/usps_crosswalk.html",
+      "members": [
+        "ZIP-CBSA_062026.xlsx",
+        "ZIP-COUNTY_062026.xlsx"
+      ],
+      "rows": 102199
+    }
+  ],
+  "started_at": "2026-10-21T12:23:30+00:00",
+  "finished_at": "2026-10-21T12:25:08+00:00",
+  "seconds": 98.34,
+  "warnings": [],
+  "skipped": []
+}

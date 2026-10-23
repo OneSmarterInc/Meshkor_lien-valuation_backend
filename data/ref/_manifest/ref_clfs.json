@@ -1,0 +1,157 @@
+{
+  "table": "ref_clfs",
+  "output": "ref\\ref_clfs.parquet",
+  "rows": 25340,
+  "columns": [
+    "hcpcs",
+    "modifier",
+    "rate",
+    "indicator",
+    "code_effective_date",
+    "description",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026Q4",
+      "file": "CLFS/2026Q4",
+      "sha256": "36e3ee8769971686b51136f0d1b30a0e151cafb2fd2418a79ab0e4b1cfdf7133",
+      "size_bytes": 1618918,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq4",
+      "members": [
+        "PUF_CLFS_CY2026_Q4V1.csv"
+      ],
+      "rows": 2243
+    },
+    {
+      "period": "2025Q4",
+      "file": "CLFS/2025Q4",
+      "sha256": "f133417147f4c94215d17c523d7d6f5a73541cfb78df9e4ff1b48d1eb3cb5f9f",
+      "size_bytes": 1136451,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq4",
+      "members": [
+        "CLFS 2025 Q4V1.csv"
+      ],
+      "rows": 2149
+    },
+    {
+      "period": "2024Q4",
+      "file": "CLFS/2024Q4",
+      "sha256": "a95268fa972965ef2201cb66c26f7460c0ce299e54dd02d7424658ef8c1163bb",
+      "size_bytes": 1036707,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq4",
+      "members": [
+        "CLFS 2024 Q4V1.csv"
+      ],
+      "rows": 2068
+    },
+    {
+      "period": "2024Q1",
+      "file": "CLFS/2024Q1",
+      "sha256": "180b90dff4386b2e8a54232b7807d1a31706aa1c430eb733a424d6b0eef36a83",
+      "size_bytes": 1427757,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq1",
+      "members": [
+        "CLFS 2024 Q1V1.csv"
+      ],
+      "rows": 1991
+    },
+    {
+      "period": "2024Q2",
+      "file": "CLFS/2024Q2",
+      "sha256": "d178ce7cd501885b87f794d97709c888f27ec694baefaffd4c3e54879edbf57c",
+      "size_bytes": 1437458,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq2",
+      "members": [
+        "CLFS 2024 Q2V1.csv"
+      ],
+      "rows": 2000
+    },
+    {
+      "period": "2024Q3",
+      "file": "CLFS/2024Q3",
+      "sha256": "c4d9c87d8edbcd8f0667528aaafeec314e6f8874624022cf6ff68d24847305bf",
+      "size_bytes": 1567689,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq3",
+      "members": [
+        "CLFS 2024 Q3V1.csv"
+      ],
+      "rows": 2024
+    },
+    {
+      "period": "2025Q1",
+      "file": "CLFS/2025Q1",
+      "sha256": "3a6ae381501ee77ae76efc8dd31676b2f906443fbf4e1b8d3dd81c29839c91fd",
+      "size_bytes": 1546228,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq1",
+      "members": [
+        "CLFS 2025 Q1V1.csv"
+      ],
+      "rows": 2087
+    },
+    {
+      "period": "2025Q2",
+      "file": "CLFS/2025Q2",
+      "sha256": "97b70c0d1b46d71c461c6e687b25b3bdd2fa1b9743b016ea55264046650f4ce7",
+      "size_bytes": 1632625,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq2",
+      "members": [
+        "CLFS 2025 Q2V1.csv"
+      ],
+      "rows": 2105
+    },
+    {
+      "period": "2025Q3",
+      "file": "CLFS/2025Q3",
+      "sha256": "166efc2b2ddddf110daf6f242258172e451200fe457341fc3de4e324e7766f89",
+      "size_bytes": 1649829,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq3",
+      "members": [
+        "CLFS 2025 Q3V2.csv"
+      ],
+      "rows": 2126
+    },
+    {
+      "period": "2026Q1",
+      "file": "CLFS/2026Q1",
+      "sha256": "5be760b9fc8660c530a99e50afb435fef2d8496c30cfe394f0b3f4f9949b7f6e",
+      "size_bytes": 2197122,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq1",
+      "members": [
+        "CLFS 2026 Q1V1.csv"
+      ],
+      "rows": 2162
+    },
+    {
+      "period": "2026Q2",
+      "file": "CLFS/2026Q2",
+      "sha256": "43c81064de5bf84a0199d5d272ea36a1ee5a58a35e8570939730bccc701d9883",
+      "size_bytes": 1616686,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq2",
+      "members": [
+        "PUF_CLFS_CY2026_Q2V1.csv"
+      ],
+      "rows": 2179
+    },
+    {
+      "period": "2026Q3",
+      "file": "CLFS/2026Q3",
+      "sha256": "179e916d69121b89ee0d3a6eb84d83a707a9e8be69219faa9b1eda62655ffa67",
+      "size_bytes": 1588564,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq3",
+      "members": [
+        "PUF_CLFS_CY2026_Q3V1.csv"
+      ],
+      "rows": 2206
+    }
+  ],
+  "started_at": "2026-10-19T16:23:23+00:00",
+  "finished_at": "2026-10-19T16:23:23+00:00",
+  "seconds": 0.43,
+  "warnings": [],
+  "skipped": []
+}

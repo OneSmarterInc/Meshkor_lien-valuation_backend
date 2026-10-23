@@ -1,0 +1,63 @@
+{
+  "table": "ref_ipps_drg",
+  "output": "ref\\ref_ipps_drg.parquet",
+  "rows": 2313,
+  "columns": [
+    "ms_drg",
+    "ms_drg_title",
+    "mdc",
+    "drg_type",
+    "post_acute_transfer",
+    "special_pay",
+    "relative_weight",
+    "relative_weight_before_cap",
+    "gmlos",
+    "amlos",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period",
+    "fiscal_year"
+  ],
+  "sources": [
+    {
+      "period": "FY2027",
+      "file": "IPPS/FY2027/cms-1849-fr-and-cn-table-5.zip",
+      "sha256": "3b43654767907b1c3fa64b5ea685c5669e4623ceb2c4a1fa488af640d1dc06d4",
+      "size_bytes": 147208,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2027-ipps-final-rule-home-page",
+      "members": [
+        "CMS-1849-CN Table 5.txt"
+      ],
+      "rows": 768
+    },
+    {
+      "period": "FY2026",
+      "file": "IPPS/FY2026/cms-1833-f-table-5.zip",
+      "sha256": "14dba6b8f06ab8191302280b80231c38c27baf35cff455d4e8888d1cd37ee81a",
+      "size_bytes": 83328,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2026-ipps-final-rule-home-page",
+      "members": [
+        "CMS-1833-F Table 5.txt"
+      ],
+      "rows": 772
+    },
+    {
+      "period": "FY2025",
+      "file": "IPPS/FY2025/fy2025-ipps-final-rule-and-correction-notice-table-5.zip",
+      "sha256": "d5e0a0bd231412e1828ee3d1629cc1da2c0731b93fad1585a1aaa3ade9f798ed",
+      "size_bytes": 146382,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2025-ipps-final-rule-home-page",
+      "members": [
+        "FY2025 IPPS Correction Notice Table 5.txt"
+      ],
+      "rows": 773
+    }
+  ],
+  "started_at": "2026-10-18T10:15:20+00:00",
+  "finished_at": "2026-10-18T10:15:20+00:00",
+  "seconds": 0.03,
+  "warnings": [],
+  "skipped": []
+}

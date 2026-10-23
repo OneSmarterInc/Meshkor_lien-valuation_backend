@@ -1,0 +1,63 @@
+{
+  "table": "ref_nadac",
+  "output": "ref\\ref_nadac.parquet",
+  "rows": 1001844,
+  "columns": [
+    "ndc",
+    "ndc_description",
+    "nadac_per_unit",
+    "price_effective_date",
+    "pricing_unit",
+    "pharmacy_type",
+    "otc",
+    "explanation_code",
+    "classification",
+    "generic_nadac_per_unit",
+    "as_of_date",
+    "source_file",
+    "source_sha256",
+    "period",
+    "effective_start",
+    "effective_end"
+  ],
+  "sources": [
+    {
+      "period": "NADAC2024",
+      "file": "NADAC/2024",
+      "sha256": "272d312694c015c6041dd84ddc7147bf348ee1c94463074e2e3dadea8ec7b8c5",
+      "size_bytes": 129680814,
+      "page": "https://data.medicaid.gov/dataset/99315a95-37ac-4eee-946a-3c523b4c481e",
+      "members": [
+        "nadac-national-average-drug-acquisition-cost-12-25-2024.csv"
+      ],
+      "rows": 359514
+    },
+    {
+      "period": "NADAC2025",
+      "file": "NADAC/2025",
+      "sha256": "8c5b1ca7ccf0118c181b35f79c9b1576f2584c931db782f3d44242c2a35d8bee",
+      "size_bytes": 139475540,
+      "page": "https://data.medicaid.gov/datasets?keyword=nadac%202025",
+      "members": [
+        "nadac-national-average-drug-acquisition-cost-12-31-2025.csv"
+      ],
+      "rows": 380819
+    },
+    {
+      "period": "NADAC2026",
+      "file": "NADAC/2026",
+      "sha256": "0845572e512132eef9c64d4db21ff1e34ed8df8024249bf32d113887ef687b0b",
+      "size_bytes": 109956772,
+      "page": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704",
+      "members": [
+        "nadac-national-average-drug-acquisition-cost-10-21-2026.csv"
+      ],
+      "rows": 321498
+    }
+  ],
+  "started_at": "2026-10-21T12:25:16+00:00",
+  "finished_at": "2026-10-21T12:25:19+00:00",
+  "seconds": 2.44,
+  "warnings": [],
+  "skipped": []
+}

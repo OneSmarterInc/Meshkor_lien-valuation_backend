@@ -1,0 +1,43 @@
+{
+  "table": "ref_quality_hospital",
+  "output": "ref\\ref_quality_hospital.parquet",
+  "rows": 5419,
+  "columns": [
+    "ccn",
+    "hospital_name",
+    "address",
+    "city",
+    "state",
+    "zip5",
+    "county",
+    "hospital_type",
+    "hospital_ownership",
+    "emergency_services",
+    "birthing_friendly",
+    "overall_star_rating",
+    "overall_rating_footnote",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-09",
+      "file": "CARECOMPARE/2026-10",
+      "sha256": "2aac9fdd370d81668aed5c9fb83a54cbdb76c110d219cdfddc604844d189647a",
+      "size_bytes": 309491125,
+      "page": "https://data.cms.gov/provider-data/topics/hospitals",
+      "members": [
+        "xubh-q36u_2026-07-22_Hospital_General_Information.csv"
+      ],
+      "rows": 5419
+    }
+  ],
+  "started_at": "2026-10-21T12:25:09+00:00",
+  "finished_at": "2026-10-21T12:25:11+00:00",
+  "seconds": 1.79,
+  "warnings": [],
+  "skipped": []
+}

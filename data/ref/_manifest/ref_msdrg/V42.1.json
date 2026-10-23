@@ -1,0 +1,66 @@
+{
+  "version": "V42.1",
+  "fiscal_year": "FY2025",
+  "effective_start": "2025-04-01",
+  "effective_end": "2025-09-30",
+  "page_url": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/ms-drg-classifications-and-software",
+  "raw_folder": "E:\\Hansavahini\\Datasetof CMS\\MSDRG\\V42.1",
+  "sources": [
+    {
+      "file": "appendix_A.txt",
+      "sha256": "1caf2e157cdb1a715f3e9da809a7b3556ff02fbf1ca16f1e372d33ae82617ca7",
+      "bytes": 50621,
+      "parsed": true
+    },
+    {
+      "file": "appendix_B.txt",
+      "sha256": "ae9d00756e8dc74f351dea1e3156b9ec3d3f6bb9f375698c0004431094cd22ca",
+      "bytes": 7394418,
+      "parsed": true
+    },
+    {
+      "file": "appendix_C.txt",
+      "sha256": "bbb70a9d55fee8d3960ad2357e59e7d25b7334e9c0fb872cd5cdafcee2be6cd6",
+      "bytes": 16231779,
+      "parsed": true
+    },
+    {
+      "file": "icd-10-ms-drg-definitions-manual-files-v42.1.zip",
+      "sha256": "76e5b66a07bdcf59e4ac982bf24b2efecfa5fba347d3a1877e2051ed5764f9f2",
+      "bytes": 4550145,
+      "parsed": false,
+      "role": "definitions manual zip"
+    },
+    {
+      "file": "medicare-severity-diagnosis-related-group-ms-drg-and-medicare-code-editor-mce-version-42-java-source.zip",
+      "sha256": "b8107e14416429b5f853824072350151a5eff5e2a2688dfebd310a1817944358",
+      "bytes": 8411600,
+      "parsed": false,
+      "role": "grouper software"
+    }
+  ],
+  "tables": {
+    "ref_msdrg": {
+      "rows": 773,
+      "output": "data\\ref\\ref_msdrg\\period=V42.1\\part-000.parquet",
+      "source_file": "appendix_A.txt"
+    },
+    "ref_msdrg_dx": {
+      "rows": 88169,
+      "output": "data\\ref\\ref_msdrg_dx\\period=V42.1\\part-000.parquet",
+      "source_file": "appendix_B.txt"
+    },
+    "ref_msdrg_cc": {
+      "rows": 18305,
+      "output": "data\\ref\\ref_msdrg_cc\\period=V42.1\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    },
+    "ref_msdrg_cc_excl": {
+      "rows": 6152,
+      "output": "data\\ref\\ref_msdrg_cc_excl\\period=V42.1\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    }
+  },
+  "loaded_at": "2026-10-22T23:16:27",
+  "seconds": 0.7
+}

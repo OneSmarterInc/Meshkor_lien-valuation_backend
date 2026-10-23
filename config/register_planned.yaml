@@ -1,0 +1,40 @@
+# Planned downloads for the data register (register.py -> data_register.xlsx).
+# Configured releases in sources_local.yaml are added automatically; list here
+# only what is NOT configured yet. `pattern` is searched under the raw folder;
+# `expected` = how many matching files means "done".
+- {group: "Step 2", item: "Ohio hospital website list (name, CCN, website)", pattern: "HOSPITAL_SITES/*.*", expected: 1,
+   link: "ref_quality_hospital has the CCN list; websites to be found", owner: "", priority: 1,
+   why: "Needed to find each hospital's cms-hpt.txt"}
+- {group: "Step 2", item: "Test price files: OSU 360085, Miami Valley 360051, Cleveland Clinic 360180", pattern: "MRF/2026-10/36*/*standardcharges*", expected: 3,
+   link: "https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists", owner: "", priority: 1,
+   why: "Real format and size before the loader is written"}
+- {group: "Step 2", item: "Price files of all Ohio acute-care hospitals (monthly)", pattern: "MRF/*/36*/*standardcharges*", expected: 170,
+   link: "https://<hospital website>/cms-hpt.txt", owner: "", priority: 2,
+   why: "Hospital rate per insurer, percentiles, cash price; history from now on"}
+- {group: "Step 2", item: "Price files of the hospitals on the 10 pilot bills", pattern: "MRF/pilot/**/*", expected: 10,
+   link: "from the pilot bills", owner: "", priority: 1,
+   why: "Manual pilot reports"}
+- {group: "License", item: "NUBC revenue codes (paid)", pattern: "NUBC/**/*", expected: 1,
+   link: "https://www.nubc.org/subcription-information", owner: "business", priority: 3,
+   why: "Map hospital bill revenue codes to services"}
+- {group: "§11 table 15", item: "Ohio Medicaid outpatient (EAPG) and inpatient (DRG) rates", pattern: "MEDICAID_OH/**/*EAPG*", expected: 1,
+   link: "https://medicaid.ohio.gov/resources-for-providers/billing", owner: "", priority: 3,
+   why: "Medicaid benchmark (not found yet)"}
+- {group: "§11 table 15/16/18", item: "Loaders for Medicaid PDF, BWC PDF, IDR (files are downloaded)", pattern: "", expected: 0,
+   link: "", owner: "developer", priority: 2, why: "Code work, no download"}
+- {group: "§11 table 17", item: "HUD ZIP-COUNTY + ZIP-CBSA 2026 Q3 (when HUD posts it)", pattern: "HUD/2026Q3/ZIP*", expected: 2,
+   link: "https://www.huduser.gov/portal/datasets/usps_crosswalk.html (US connection needed)", owner: "", priority: 3,
+   why: "Next quarter of the zip crosswalk"}
+- {group: "Inpatient", item: "MS-DRG Definitions Manual + Java grouper, V41-V44 (folders MSDRG/V41 ...)", pattern: "MSDRG/V*/*.zip", expected: 14,
+   link: "https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/AcuteInpatientPPS/MS-DRG-Classifications-and-Software", owner: "Member 3", priority: 2,
+   why: "Group an inpatient stay into a DRG when the bill does not show it"}
+- {group: "Drug audit", item: "Medicare Part B Spending by Drug (latest year)", pattern: "PARTB_SPEND/*/*.csv", expected: 1,
+   link: "https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-spending-by-drug/medicare-part-b-spending-by-drug", owner: "Member 1", priority: 2,
+   why: "Pick the top infusion drugs by Medicare spending"}
+- {group: "Drug audit", item: "340B covered entities, Ohio hospitals", pattern: "340B/**/*", expected: 1,
+   link: "https://340bopais.hrsa.gov/", owner: "Member 3", priority: 3,
+   why: "is_340b flag on each hospital"}
+- {group: "Step 2", item: "Older price files 2024-2025 of the 3 test hospitals (Internet Archive copies)", pattern: "MRF/202[45]-*/36*/*", expected: 3,
+   link: "https://web.archive.org/", owner: "Member 2", priority: 2,
+   why: "Lien report needs rates for care 2-3 years old"}
+

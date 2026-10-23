@@ -1,0 +1,118 @@
+{
+  "table": "ref_ncci_ptp",
+  "output": "ref\\ref_ncci_ptp.parquet",
+  "rows": 4506527,
+  "columns": [
+    "setting",
+    "column_1",
+    "column_2",
+    "prior_1996",
+    "effective_start",
+    "deletion_date",
+    "modifier_indicator",
+    "rationale",
+    "ncci_version",
+    "effective_end",
+    "is_applicable",
+    "source_file",
+    "source_sha256",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026Q4/hospital",
+      "file": "NCCI/PTP/ccioph-v323r0-f1.zip",
+      "sha256": "fdf7651190e17f601e9a7112ea9a3107d078469c3bb49a42a79785afc4e83fe6",
+      "size_bytes": 13905034,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccioph-v323r0-f1.txt"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/hospital",
+      "file": "NCCI/PTP/ccioph-v323r0-f2.zip",
+      "sha256": "5f39fb6295824ad7199a10eb97c91d478def1ad1a06052dda4879c25efd7004f",
+      "size_bytes": 13785334,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccioph-v323r0-f2.txt"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/hospital",
+      "file": "NCCI/PTP/ccioph-v323r0-f3.zip",
+      "sha256": "e323c7c723c9a8ba67e01e6c82f695e2e605877f1404b4d9a02e133c16b685a9",
+      "size_bytes": 13776497,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccioph-v323r0-f3.txt"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/hospital",
+      "file": "NCCI/PTP/ccioph-v323r0-f4.zip",
+      "sha256": "0e731c4c0f5a2150d1c7d9fced946f2ac06421a538b7a78fc093bf17eb64912b",
+      "size_bytes": 12964356,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccioph-v323r0-f4.txt"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/practitioner",
+      "file": "NCCI/PTP/ccipra-v323r0-f1.zip",
+      "sha256": "40adc15de0b5cf9470f874b4a0183a2edb285783f2c1c3db35ab27e1a0b032e2",
+      "size_bytes": 20238121,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccipra-v323r0-f1.TXT"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/practitioner",
+      "file": "NCCI/PTP/ccipra-v323r0-f2.zip",
+      "sha256": "e0c916cc5b0bf1b7d1dea454a02f024fa1f8b8c819da0f86f144ab1d6ff5343d",
+      "size_bytes": 19186336,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccipra-v323r0-f2.TXT"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/practitioner",
+      "file": "NCCI/PTP/ccipra-v323r0-f3.zip",
+      "sha256": "79024324e5f2ac9666a5183c9b256a79cd217f1c495d0f69d53c2a1b9d98b208",
+      "size_bytes": 19812296,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccipra-v323r0-f3.txt"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026Q4/practitioner",
+      "file": "NCCI/PTP/ccipra-v323r0-f4.zip",
+      "sha256": "028a6d91e27ab177a70f125db22f3f3e898f66345852e7f5470e2065796ef545",
+      "size_bytes": 17884951,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits",
+      "members": [
+        "ccipra-v323r0-f4.txt"
+      ],
+      "rows": 0
+    }
+  ],
+  "started_at": "2026-10-17T09:06:30+00:00",
+  "finished_at": "2026-10-17T09:06:34+00:00",
+  "seconds": 3.41,
+  "warnings": [
+    "4 rows share a key with another row in the same release (kept; see deletion_date)"
+  ],
+  "skipped": []
+}

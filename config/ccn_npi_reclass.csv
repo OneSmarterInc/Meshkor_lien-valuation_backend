@@ -1,0 +1,14 @@
+npi,category,reason,source
+1922209188,not_hospital,Case Western Reserve University is a university; the address is the Cleveland VA (10701 East Blvd),name + address
+1306182332,not_acute,Cleveland Clinic Mercy outpatient site in New Philadelphia (1031 W High Ave); the inpatient hospital is in Canton (confirm),address
+1508480922,closed,"East Ohio Regional Hospital, Martins Ferry, closed in 2019",https://www.beckershospitalreview.com/finance/ohio-hospital-closes-093019/
+1912987256,closed,Heart Hospital of Dayton closed; the building is now Kindred Hospital Dayton (a different hospital),earlier review
+1447203989,closed,Lakewood Hospital closed in 2016,public record
+1871688036,closed,Mercy Hospital Western Hills closed in 2013; replaced by Mercy Health West Hospital,public record
+1811416514,not_acute,"NEO Post Acute Care: post-acute / long-term care hospital, not an IPPS acute-care hospital (confirm)",https://spine.co/us/facility/neo-post-acute-care-llc-cuyahoga-falls-oh
+1861544074,closed,Riverview Health Institute (Medical Center at Elizabeth Place) no longer operates; the address is now a behavioral hospital with another operator (confirm),earlier review
+1043421290,not_acute,"The Ohio State University, 3600 Reed Rd: outpatient site, not the OSU inpatient campus (confirm)",address
+1124397435,not_acute,"UH Regional Hospitals, Bedford campus: inpatient and emergency services ended in 2022",https://www.beckershospitalreview.com/care-coordination/2-ohio-hospitals-to-end-inpatient-care/
+1184004533,not_acute,"UH Regional Hospitals, Richmond Heights campus: inpatient and emergency services ended in 2022",https://www.beckershospitalreview.com/care-coordination/2-ohio-hospitals-to-end-inpatient-care/
+1487787727,closed,"Western Reserve Care System: former Youngstown system (later Forum Health, then Northside, which closed in 2019)",public record
+1295538163,not_acute,"Kettering Health Wilmington, 1500 Rombach Ave: new Kettering Health medical center / outpatient site; no separate acute-care CCN found (confirm)",https://ketteringhealth.org/locations/kettering-health-wilmington-mc017/

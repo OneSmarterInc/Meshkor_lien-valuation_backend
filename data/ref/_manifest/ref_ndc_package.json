@@ -1,0 +1,39 @@
+{
+  "table": "ref_ndc_package",
+  "output": "ref\\ref_ndc_package.parquet",
+  "rows": 219045,
+  "columns": [
+    "product_id",
+    "product_ndc",
+    "package_ndc",
+    "package_description",
+    "start_marketing_date",
+    "end_marketing_date",
+    "ndc_exclude_flag",
+    "sample_package",
+    "ndc11",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-10",
+      "file": "FDA_NDC/2026-10",
+      "sha256": "0bbf87f08dcc2b154d8cc0bb5ad9ad4a78ab5ba4d26c2efd42d6bcf539be7ee8",
+      "size_bytes": 81384892,
+      "page": "https://www.fda.gov/drugs/drug-approvals-and-databases/national-drug-code-directory",
+      "members": [
+        "ndctext\\package.txt"
+      ],
+      "rows": 219045
+    }
+  ],
+  "started_at": "2026-10-21T12:25:19+00:00",
+  "finished_at": "2026-10-21T12:25:19+00:00",
+  "seconds": 0.18,
+  "warnings": [],
+  "skipped": []
+}

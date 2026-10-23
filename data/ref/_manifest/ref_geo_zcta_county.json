@@ -1,0 +1,37 @@
+{
+  "table": "ref_geo_zcta_county",
+  "output": "ref\\ref_geo_zcta_county.parquet",
+  "rows": 46960,
+  "columns": [
+    "zcta5",
+    "county_fips",
+    "county_name",
+    "area_land_part",
+    "area_water_part",
+    "area_land_zcta",
+    "land_share",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2020",
+      "file": "CENSUS/ZCTA2020",
+      "sha256": "62d92d379a4c33491809f385f15032e8cb91074cb4c69b20356b96567407e816",
+      "size_bytes": 6821383,
+      "page": "https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.html",
+      "members": [
+        "tab20_zcta520_county20_natl.txt"
+      ],
+      "rows": 46960
+    }
+  ],
+  "started_at": "2026-10-21T12:25:09+00:00",
+  "finished_at": "2026-10-21T12:25:09+00:00",
+  "seconds": 0.5,
+  "warnings": [],
+  "skipped": []
+}

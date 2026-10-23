@@ -1,0 +1,69 @@
+{
+  "table": "ref_provider",
+  "output": "ref\\ref_provider",
+  "rows": 9852180,
+  "columns": [
+    "npi",
+    "entity_type",
+    "replacement_npi",
+    "provider_name",
+    "organization_name",
+    "last_name",
+    "first_name",
+    "credential",
+    "practice_address_1",
+    "practice_city",
+    "practice_state",
+    "zip5",
+    "zip3",
+    "practice_country",
+    "primary_taxonomy",
+    "primary_flag_missing",
+    "all_taxonomies",
+    "medicare_oscar_ids",
+    "enumeration_date",
+    "last_update_date",
+    "deactivation_date",
+    "reactivation_date",
+    "deactivation_reason",
+    "is_deactivated",
+    "is_subpart",
+    "parent_org_lbn",
+    "is_sole_proprietor",
+    "effective_start",
+    "effective_end",
+    "snapshot_date",
+    "source_file",
+    "source_sha256",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-10",
+      "file": "NPES",
+      "sha256": "b22e2fac1cef45759f81f168c55e85896ca911221cc5e44b3f577ba2f7a0627d",
+      "size_bytes": 11763905295,
+      "page": "https://download.cms.gov/nppes/NPI_Files.html",
+      "members": [
+        "npidata_pfile_20050523-20261011.csv"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026-10",
+      "file": "NPES/NPPES Deactivated NPI Report 20261012.xlsx",
+      "sha256": "0552b3192932726cd4ed69679b2f895638479bd4cedbaf6091ffea12d8b974ad",
+      "size_bytes": 5627861,
+      "page": "https://download.cms.gov/nppes/NPI_Files.html",
+      "members": [
+        "NPPES Deactivated NPI Report 20261012.xlsx"
+      ],
+      "rows": 0
+    }
+  ],
+  "started_at": "2026-10-17T08:42:13+00:00",
+  "finished_at": "2026-10-17T08:43:46+00:00",
+  "seconds": 93.76,
+  "warnings": [],
+  "skipped": []
+}

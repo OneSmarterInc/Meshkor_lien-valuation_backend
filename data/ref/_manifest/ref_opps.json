@@ -1,0 +1,159 @@
+{
+  "table": "ref_opps",
+  "output": "ref\\ref_opps.parquet",
+  "rows": 224012,
+  "columns": [
+    "hcpcs",
+    "description",
+    "status_indicator",
+    "apc",
+    "relative_weight",
+    "payment_rate_national",
+    "national_unadjusted_copay",
+    "minimum_unadjusted_copay",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026Q4",
+      "file": "OPPS",
+      "sha256": "0b2483f46bd2fe931251995d6747cebd4c80ba3b059080d11a2006cd22a9f327",
+      "size_bytes": 2393408,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates/october-2026-addendum-b",
+      "members": [
+        "2026_October_Web_Addendum_B.10.14.26.xlsx"
+      ],
+      "rows": 19278
+    },
+    {
+      "period": "2025Q4",
+      "file": "OPPS2025",
+      "sha256": "c044636bbb87101743131cba26f5670b2ff3084525e0aeb859d313d2229c3d98",
+      "size_bytes": 3618817,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates/october-2025-addendum-b",
+      "members": [
+        "508 version of October 2025 Web Addendum B.10.31.25.csv"
+      ],
+      "rows": 18797
+    },
+    {
+      "period": "2024Q4",
+      "file": "OPPS2024",
+      "sha256": "a5500da0c2ce10669309cd77daff9ffe4695d01caecb81036d97a4ffc9ead560",
+      "size_bytes": 3166072,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient/addendum-a-b-updates/october-2024-updated-10/02/2024-0",
+      "members": [
+        "Section 508 version of October_2024_Web_Addendum_B.10.02.24.csv"
+      ],
+      "rows": 18339
+    },
+    {
+      "period": "2024Q1",
+      "file": "OPPS2024A",
+      "sha256": "cd0094a6114f2d0529b2378db6c2430e24eb00e91ab02bdf1af61bc652c97187",
+      "size_bytes": 2871377,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "Section 508 vesrion of January_Web_2024_Addendum_B.04.24.24.csv"
+      ],
+      "rows": 18107
+    },
+    {
+      "period": "2024Q2",
+      "file": "OPPS2024B",
+      "sha256": "4175fce3d363bd2496d4e695442df6a1cc120322eb7e02c7158ae40b0fc8e126",
+      "size_bytes": 2902837,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "508_Version_April_2024_Addendum_B.04.22.24.csv"
+      ],
+      "rows": 18160
+    },
+    {
+      "period": "2024Q3",
+      "file": "OPPS2024C",
+      "sha256": "0f51593ebf1f2f075702e75f398da843c24270e8158e003ce6e0fb00cfa24e50",
+      "size_bytes": 3215830,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "Section-508-version of July_Web_2024_Addendum_B.08052024.csv"
+      ],
+      "rows": 18263
+    },
+    {
+      "period": "2025Q1",
+      "file": "OPPS2025A",
+      "sha256": "5f7ed650a467ce9ee24264328ea584e85216deb46814a43f837fc2b1df8cbc34",
+      "size_bytes": 3832432,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "508 Version of January 2025 Web Addendum B.12.31.24.csv"
+      ],
+      "rows": 18561
+    },
+    {
+      "period": "2025Q2",
+      "file": "OPPS2025B",
+      "sha256": "033b02a0325439762f5bb29b34a61b160f113169353f75823511eedbab44400b",
+      "size_bytes": 3680703,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "Section 508 version of April 2025 Web Addendum B.03.28.25.csv"
+      ],
+      "rows": 18612
+    },
+    {
+      "period": "2025Q3",
+      "file": "OPPS2025C",
+      "sha256": "296e0e00061a0379338496b368f3a86b2f4f7a6232dc0ead4259ee66fc485ff2",
+      "size_bytes": 3570594,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "Section 508 of July 2025 Web Addendum B.07.25.25.csv"
+      ],
+      "rows": 18703
+    },
+    {
+      "period": "2026Q1",
+      "file": "OPPS2026A",
+      "sha256": "7a15f0ecd0280cd35062836a401cbf92a6fa67e49f4c80abc0e334692c28d4d0",
+      "size_bytes": 3985621,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "508 Version 2026 January Web Addendum B\\2026 January Web Addendum B.12.29.25.csv"
+      ],
+      "rows": 18984
+    },
+    {
+      "period": "2026Q2",
+      "file": "OPPS2026B",
+      "sha256": "25b666a7023c190bf57be1df57d3b7d4a39fa07b21f37252d28a17cf531e15fa",
+      "size_bytes": 7775723,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "508 Version April 2026 Web Addendum B\\2026 April Web Addendum B.03.23.26.csv"
+      ],
+      "rows": 19057
+    },
+    {
+      "period": "2026Q3",
+      "file": "OPPS2026C",
+      "sha256": "8dc631d3dce30ee3e8a9fa6740181680faa2c38ad4d9e84fe4ebe3ce482219b9",
+      "size_bytes": 3775451,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates",
+      "members": [
+        "508 Version July Addendum B\\2026 July Web Addendum B.07.13.26.csv"
+      ],
+      "rows": 19151
+    }
+  ],
+  "started_at": "2026-10-19T15:21:10+00:00",
+  "finished_at": "2026-10-19T15:21:12+00:00",
+  "seconds": 2.28,
+  "warnings": [],
+  "skipped": []
+}

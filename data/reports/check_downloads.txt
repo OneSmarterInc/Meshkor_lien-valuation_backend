@@ -1,0 +1,69 @@
+=== 1. ASP (expect 12 folders, 32 zips) ===
+  OK    2024Q1  files=17 zips=3
+  OK    2024Q2  files=17 zips=3
+  OK    2024Q3  files=17 zips=3
+  OK    2024Q4  files=19 zips=3
+  OK    2025Q1  files=19 zips=3
+  OK    2025Q2  files=19 zips=3
+  OK    2025Q3  files=19 zips=3
+  OK    2025Q4  files=19 zips=3
+  OK    2026Q1  files=14 zips=2
+  OK    2026Q2  files=16 zips=2
+  OK    2026Q3  files=16 zips=2
+  OK    2026Q4  files=16 zips=2
+
+=== 2. HCPCS (expect 12 folders, 1 zip each) ===
+  OK    2024Q1 january-2024-alpha-numeric-hcpcs-files.zip
+  OK    2024Q2 april-2024-alpha-numeric-hcpcs-files.zip
+  OK    2024Q3 july-2024-alpha-numeric-hcpcs-file.zip
+  OK    2024Q4 october-2024-alpha-numeric-hcpcs-file.zip
+  OK    2025Q1 january-2025-alpha-numeric-hcpcs-file.zip
+  OK    2025Q2 april-2025-alpha-numeric-hcpcs-file.zip
+  OK    2025Q3 july-2025-alpha-numeric-hcpcs-file.zip
+  OK    2025Q4 october-2025-alpha-numeric-hcpcs-file.zip
+  OK    2026Q1 january-2026-alpha-numeric-hcpcs-file.zip
+  OK    2026Q2 april-2026-alpha-numeric-hcpcs-file.zip
+  OK    2026Q3 july-2026-alpha-numeric-hcpcs-file.zip
+  OK    2026Q4 october-2026-alpha-numeric-hcpcs-file.zip
+
+=== 3. MSDRG (expect 7 folders, 2 zips each) ===
+  OK    V41 2 zips
+  OK    V41.1 2 zips
+  OK    V42 2 zips
+  OK    V42.1 2 zips
+  OK    V43 2 zips
+  OK    V43.1 2 zips
+  OK    V44 2 zips
+
+=== 4. PARTB_SPEND ===
+  OK    Q2025Q3 csv=1
+  OK    RY2025 csv=1
+
+=== 5. MRF (price files) ===
+  OK    2026-10\360085 files=2 size=0.48 GB
+  WARN  2026-10\360085_work price page (html/pdf) not saved
+  OK    2026-10\360085_work files=2 size=0 GB
+  OK    2026-10\360242 files=2 size=0.84 GB
+
+=== 6. Duplicates and replaced files (hash, files < 2 GB) ===
+  WARN  same file in 2 places: ASP\2024Q1\section 508 version of NDC-HCPCS Crosswalk Introduction Text 120723.csv  |  ASP\2024Q2\section 508 version of NDC-HCPCS Crosswalk Introduction Text 030724.csv  |  ASP\2024Q3\section 508 version of NDC-HCPCS Crosswalk Introduction Text 060624.csv  |  ASP\2024Q4\section 508 version of NDC-HCPCS Crosswalk Introduction Text 090624.csv  |  ASP\2025Q1\section 508 version of NDC-HCPCS Crosswalk Introduction Text 120924.csv  |  ASP\2025Q2\section 508 version of NDC-HCPCS Crosswalk Introduction Text 030725.csv  |  ASP\2025Q3\section 508 version of NDC-HCPCS Crosswalk Introduction Text 060325.csv  |  ASP\2025Q4\section 508 version of NDC-HCPCS Crosswalk Introduction Text 090525.csv  |  ASP\2026Q1\section 508 version of NDC-HCPCS Crosswalk Introduction Text 120525.csv  |  ASP\2026Q2\section 508 version of NDC-HCPCS Crosswalk Introduction Text 030926.csv  |  ASP\2026Q3\section 508 version of NDC-HCPCS Crosswalk Introduction Text 060226.csv  |  ASP\2026Q4\section 508 version of NDC-HCPCS Crosswalk Introduction Text 090326.csv
+  WARN  same file in 2 places: ASP\2025Q2\section 508 version of April 2025 PrEP NDC-HCPCS Crosswalk 030725.csv  |  ASP\2025Q3\section 508 version of July 2025 PrEP NDC-HCPCS Crosswalk 052125.csv
+  WARN  same file in 2 places: ASP\2025Q4\Section 508 Version of October 2025 PrEP NDC-HCPCS Crosswalk 081325.csv  |  ASP\2026Q1\section 508 version of January 2026 PrEP NDC-HCPCS Crosswalk 112125.csv
+  WARN  same file in 2 places: ASP\2026Q2\Section 508 April 2026 PrEP NDC-HCPCS Crosswalk 031026.csv  |  ASP\2026Q3\Section 508 version of July 2026 PrEP NDC-HCPCS Crosswalk 060226.csv  |  ASP\2026Q4\Section 508 version of October 2026 PrEP NDC-HCPCS Crosswalk 08132026.csv
+  WARN  same file in 2 places: HCPCS\2024Q1\HCPC2024_recordlayout.txt  |  HCPCS\2024Q2\HCPC2024_recordlayout.txt  |  HCPCS\2024Q3\HCPC2024_recordlayout.txt  |  HCPCS\2024Q4\HCPC2024_recordlayout.txt
+  WARN  same file in 2 places: HCPCS\2024Q1\proc_notes_JAN2024.txt  |  HCPCS\2024Q2\proc_notes_APR2024.txt  |  HCPCS\2024Q3\proc_notes_JUL2024.txt  |  HCPCS\2024Q4\proc_notes_OCT2024.txt
+  WARN  same file in 2 places: HCPCS\2024Q2\NOC codes_APR 2024.xlsx  |  HCPCS\2024Q3\NOC codes_JUL 2024.xlsx  |  HCPCS\2024Q4\NOC codes_OCT2024.xlsx
+  WARN  same file in 2 places: HCPCS\2025Q1\proc_notes_JAN2025.txt  |  HCPCS\2025Q2\proc_notes_APR2025.txt  |  HCPCS\2025Q3\proc_notes_JUL2025.txt  |  HCPCS\2025Q4\proc_notes_OCT2025 - Copy.txt  |  HCPCS\2026Q1\proc_notes_JAN2026.txt
+  WARN  same file in 2 places: HCPCS\2025Q2\HCPC2025_recordlayout.txt  |  HCPCS\2025Q3\HCPC2025_recordlayout.txt  |  HCPCS\2025Q4\HCPC2025_recordlayout.txt
+  WARN  same file in 2 places: HCPCS\2026Q1\HCPC2026_recordlayout.txt  |  HCPCS\2026Q2\HCPC2026_recordlayout.txt  |  HCPCS\2026Q3\HCPC2026_recordlayout.txt  |  HCPCS\2026Q4\HCPC2026_recordlayout.txt
+  WARN  same file in 2 places: HCPCS\2026Q3\proc_notes_JUL2026.txt  |  HCPCS\2026Q4\proc_notes_OCT2026.txt
+  WARN  same file in 2 places: MSDRG\V41\appendix_B.txt  |  MSDRG\V41.1\appendix_B.txt
+  WARN  same file in 2 places: MSDRG\V42\appendix_B.txt  |  MSDRG\V42.1\appendix_B.txt
+  WARN  same file in 2 places: MSDRG\V42\appendix_C.txt  |  MSDRG\V42.1\appendix_C.txt
+  WARN  same file in 2 places: MSDRG\V42\appendix_F_I.txt  |  MSDRG\V42.1\appendix_F_I.txt
+  WARN  same file in 2 places: MSDRG\V43\appendix_B.txt  |  MSDRG\V43.1\appendix_B.txt
+  WARN  same file in 2 places: MRF\2026-10\360085\osu_price_page_2026-10-22.html  |  MRF\2026-10\360242\osu_price_page_2026-10-22.html
+  new files since last check: 4
+  hash list saved: D:\meshkor-data\data\reports\download_hashes.csv  (414 files)
+
+=== RESULT: 0 FAIL ===

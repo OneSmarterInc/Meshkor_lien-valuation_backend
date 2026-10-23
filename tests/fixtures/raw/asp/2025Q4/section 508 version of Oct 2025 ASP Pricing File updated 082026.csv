@@ -1,0 +1,15 @@
+Payment Allowance Limits for Medicare Part B Drugs,,,,,,,,,,
+,,,,,,,,,,
+"Effective October 1, 2025 through December 31, 2025",,,,,,,,,,
+,,,,,,,,,,
+Note 1: Payment allowance limits subject to the ASP methodology are based on 2Q25 ASP data.,,,,,,,,,,
+Note 2: The absence or presence of a HCPCS code and the payment allowance limits in this table does not indicate whether Medicare covers a drug.  These determinations shall be made by the local Medicare contractor processing the claim.,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+HCPCS Code,Short Description,HCPCS Code Dosage,Payment Limit,Co-insurance Percentage,Vaccine AWP%,Vaccine Limit,Blood AWP%,Blood limit,Clotting Factor,Notes
+90371,Hep b ig im,1 ML,134.194,20.000,,,,,,
+J0739,"Hiv prep, inj, cabotegravir",1 mg,7.020,0.000,,,,,,HIV PrEP drug
+J0751,"Hiv prep, ftc/taf 200/25mg",200 mg/25 mg,71.324,0.000,,,,,,HIV PrEP drug
+J9271,Inj pembrolizumab,1 MG,60.291,20.000,,,,,,
+Q4111,Gammagraft,1 SQ CM,7.872,20.000,,,,,,
+,,,

@@ -1,0 +1,47 @@
+{
+  "table": "ref_quality_measure",
+  "output": "ref\\ref_quality_measure.parquet",
+  "rows": 473384,
+  "columns": [
+    "ccn",
+    "measure_group",
+    "measure_id",
+    "measure_name",
+    "condition",
+    "compared_to_national",
+    "score",
+    "score_value",
+    "denominator",
+    "lower_estimate",
+    "higher_estimate",
+    "footnote",
+    "measure_start",
+    "measure_end",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-09",
+      "file": "CARECOMPARE/2026-10",
+      "sha256": "2aac9fdd370d81668aed5c9fb83a54cbdb76c110d219cdfddc604844d189647a",
+      "size_bytes": 309491125,
+      "page": "https://data.cms.gov/provider-data/topics/hospitals",
+      "members": [
+        "632h-zaca_2026-09-10_Unplanned_Hospital_Visits-Hospital.csv",
+        "77hc-ibv8_2026-07-22_Healthcare_Associated_Infections-Hospital.csv",
+        "ynj2-r877_2026-09-10_Complications_and_Deaths-Hospital.csv",
+        "yv7e-xc69_2026-07-22_Timely_and_Effective_Care-Hospital.csv"
+      ],
+      "rows": 473384
+    }
+  ],
+  "started_at": "2026-10-21T12:25:11+00:00",
+  "finished_at": "2026-10-21T12:25:13+00:00",
+  "seconds": 1.5,
+  "warnings": [],
+  "skipped": []
+}

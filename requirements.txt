@@ -1,0 +1,8 @@
+polars>=1.30
+duckdb>=1.2
+pyarrow>=17
+pyyaml>=6
+openpyxl>=3.1
+django>=5.1
+psycopg[binary]>=3.2
+pytest>=8

@@ -1,0 +1,289 @@
+{
+  "table": "ref_mue",
+  "output": "ref\\ref_mue.parquet",
+  "rows": 357057,
+  "columns": [
+    "hcpcs",
+    "setting",
+    "mue_value",
+    "mue_adjudication_indicator",
+    "mue_adjudication_desc",
+    "mue_rationale",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026Q4/hospital",
+      "file": "NCCI/facilityoutpatienthospitalservicesmuetable-effective-10-01-2026",
+      "sha256": "f174b39ddcaf08fe3c30fda8f4ae2dfac90b98ccc09ba2864b513ac12dc62ad0",
+      "size_bytes": 1325215,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edits",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_10-01-2026.csv"
+      ],
+      "rows": 15162
+    },
+    {
+      "period": "2026Q4/practitioner",
+      "file": "NCCI/practitionerservicesmuetable-effective-10-01-2026",
+      "sha256": "e165bcd1e39ee0db8333b7b814c6bb6ddd87525e9ff129fd445b658dec4e1e38",
+      "size_bytes": 1317402,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edits",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_10-01-2026.csv"
+      ],
+      "rows": 15212
+    },
+    {
+      "period": "2025Q4/hospital",
+      "file": "MUE2025/hospital",
+      "sha256": "5a6593e69c8fba7b0d65399afd9f5c1f94660bc83cc31b4d777a342a503bdb20",
+      "size_bytes": 1703983,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_10-01-2025.csv"
+      ],
+      "rows": 14907
+    },
+    {
+      "period": "2025Q4/practitioner",
+      "file": "MUE2025/practitioner",
+      "sha256": "90acec749e1f03f588316696d16cfcbd7c87e85c810e41eb9dc533944401b988",
+      "size_bytes": 1692841,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_10-01-2025.csv"
+      ],
+      "rows": 14957
+    },
+    {
+      "period": "2024Q4/hospital",
+      "file": "MUE2024/hospital",
+      "sha256": "58da99490a301a858c82681175244fb50e2f428a3c95287d141d6004fd8d3ef9",
+      "size_bytes": 1677553,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_10-01-2024.csv"
+      ],
+      "rows": 14690
+    },
+    {
+      "period": "2024Q4/practitioner",
+      "file": "MUE2024/practitioner",
+      "sha256": "4205f956af329093f22f2eaff9d596903746c17ad6928d56e3ce51b141d8a7f2",
+      "size_bytes": 1666422,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_10-01-2024.csv"
+      ],
+      "rows": 14739
+    },
+    {
+      "period": "2024Q1/hospital",
+      "file": "MUE2024A/hospital",
+      "sha256": "76d6075fc988e1382bb3f343783135a627f80cc6077372c255f23227c8faac69",
+      "size_bytes": 1652671,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_01-01-2024_R1.csv"
+      ],
+      "rows": 14507
+    },
+    {
+      "period": "2024Q1/practitioner",
+      "file": "MUE2024A/practitioner",
+      "sha256": "2d670114795fa7323a885ecc37eab3b03758e043779d8856621d2bc021446f20",
+      "size_bytes": 1639056,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_01-01-2024_R1.csv"
+      ],
+      "rows": 14557
+    },
+    {
+      "period": "2024Q2/hospital",
+      "file": "MUE2024B/hospital",
+      "sha256": "19b60926d0e1d6ec53a0532eab4d64627a8bd5122d60f704f54ccf828b057417",
+      "size_bytes": 1671741,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "FacilityOutpatientHospitalServicesMUETable-Effective-04-01-2024\\MCR_MUE_OutpatientHospitalServices_Eff_04-01-2024.csv"
+      ],
+      "rows": 14629
+    },
+    {
+      "period": "2024Q2/practitioner",
+      "file": "MUE2024B/practitioner",
+      "sha256": "4478e01e6208ca8be3c7ba8dcb881cf56c406395f725435a3cfdead4897bd5f4",
+      "size_bytes": 1657167,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "PractitionerServicesMUETable-Effective-04-01-2024\\MCR_MUE_PractitionerServices_Eff_04-01-2024.csv"
+      ],
+      "rows": 14679
+    },
+    {
+      "period": "2024Q3/hospital",
+      "file": "MUE2024C/hospital",
+      "sha256": "65098cb1292d498fdb67b7ea4095139c42bf033e4ba196124e9cb5ebe87d9444",
+      "size_bytes": 1668509,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_07-01-2024.csv"
+      ],
+      "rows": 14628
+    },
+    {
+      "period": "2024Q3/practitioner",
+      "file": "MUE2024C/practitioner",
+      "sha256": "06b9378e968b349c41bf551e008e9847b8eade15433c873d0f78121c1eba1358",
+      "size_bytes": 1658315,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_07-01-2024.csv"
+      ],
+      "rows": 14677
+    },
+    {
+      "period": "2025Q1/hospital",
+      "file": "MUE2025A/hospital",
+      "sha256": "aafdacf073fd63e96134b9afa70be33f079a7575bf49069cf7cd1bdf60be3c7e",
+      "size_bytes": 1683148,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_01-01-2025.csv"
+      ],
+      "rows": 14737
+    },
+    {
+      "period": "2025Q1/practitioner",
+      "file": "MUE2025A/practitioner",
+      "sha256": "86ce15fce2cd42ec37ff450908ced2c0c71f87a40b6916893f9715a0f21a6f95",
+      "size_bytes": 1670447,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_01-01-2025.csv"
+      ],
+      "rows": 14786
+    },
+    {
+      "period": "2025Q2/hospital",
+      "file": "MUE2025B/hospital",
+      "sha256": "3097c3df389807f361f1ea9ced30376eba232bf0cb91233fe5480a3f8377a151",
+      "size_bytes": 1695284,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_04-01-2025_R1.csv"
+      ],
+      "rows": 14911
+    },
+    {
+      "period": "2025Q2/practitioner",
+      "file": "MUE2025B/practitioner",
+      "sha256": "fb97746498c8166ca5daa6b1d283d5422bd4f3554d615d2be02401d08739a470",
+      "size_bytes": 1683953,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_04-01-2025_R1.csv"
+      ],
+      "rows": 14960
+    },
+    {
+      "period": "2025Q3/hospital",
+      "file": "MUE2025C/hospital",
+      "sha256": "35ae92a8e89f9ad0ce62bd962c38611811d77c20d6ebc3186ddeb8b6856dea6b",
+      "size_bytes": 1702835,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_07-01-2025_R1.csv"
+      ],
+      "rows": 14893
+    },
+    {
+      "period": "2025Q3/practitioner",
+      "file": "MUE2025C/practitioner",
+      "sha256": "1679c026f8a8cbec9f805128ec25b6f2ffad534e910da6f75316e964a0b2dc6b",
+      "size_bytes": 1690862,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_07-01-2025_R1.csv"
+      ],
+      "rows": 14942
+    },
+    {
+      "period": "2026Q1/hospital",
+      "file": "MUE2026A/hospital",
+      "sha256": "0ffee7f6d05a694c0062f527b2d58f422c530f1b062c81646e1b9502e38316f5",
+      "size_bytes": 1717603,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_01-01-2026.csv"
+      ],
+      "rows": 15010
+    },
+    {
+      "period": "2026Q1/practitioner",
+      "file": "MUE2026A/practitioner",
+      "sha256": "96543e747e763d721cb74ba25e370242312e7f25e2175c3139b1814647276330",
+      "size_bytes": 1706297,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_01-01-2026.csv"
+      ],
+      "rows": 15060
+    },
+    {
+      "period": "2026Q2/hospital",
+      "file": "MUE2026B/hospital",
+      "sha256": "79a93446622b25824347575f3be25fc8416ca053852c682fa4c3f06acd0e3ae3",
+      "size_bytes": 1722460,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_04-01-2026.csv"
+      ],
+      "rows": 15045
+    },
+    {
+      "period": "2026Q2/practitioner",
+      "file": "MUE2026B/practitioner",
+      "sha256": "2e504c35d76c301c4c6d777a45ad6e4677f11b5abf67b0f0f27df4081c7dd67e",
+      "size_bytes": 1711712,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_04-01-2026.csv"
+      ],
+      "rows": 15095
+    },
+    {
+      "period": "2026Q3/hospital",
+      "file": "MUE2026C/hospital",
+      "sha256": "49a57f35234feeea3157aa262118bd040fb3b4fcbd48a7cd8e418b133b1264d9",
+      "size_bytes": 1729909,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_OutpatientHospitalServices_Eff_07-01-2026.csv"
+      ],
+      "rows": 15112
+    },
+    {
+      "period": "2026Q3/practitioner",
+      "file": "MUE2026C/practitioner",
+      "sha256": "c3ae164122f0f9019a9b7c338ae1682632cd73a554060178940f45c926c23cd6",
+      "size_bytes": 1717975,
+      "page": "https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive",
+      "members": [
+        "MCR_MUE_PractitionerServices_Eff_07-01-2026.csv"
+      ],
+      "rows": 15162
+    }
+  ],
+  "started_at": "2026-10-19T16:20:57+00:00",
+  "finished_at": "2026-10-19T16:20:58+00:00",
+  "seconds": 1.16,
+  "warnings": [],
+  "skipped": []
+}

@@ -1,0 +1,89 @@
+# .gitignore for D:\Meshkor_Backend\meshkor-data
+# Rule: push code, config, SQL, tests, docs, manifests and verify reports.
+#       Keep data (rebuilt from raw files), secrets, virtualenv and anything with PHI out.
+
+# ---- secrets and machine settings
+.env
+.env.*
+*.env
+backend/.env
+backend/**/local_settings.py
+
+# ---- data: Parquet, DuckDB, work files are rebuilt by load_ref / build_duckdb
+data/**
+# keep the small proof files
+!data/
+!data/ref/
+!data/ref/_manifest/
+!data/ref/_manifest/**
+!data/reports/
+!data/reports/**
+# but never these even under the kept folders
+data/ref/**/*.parquet
+data/ref/**/*.parquet.tmp
+data/work/
+data/*.duckdb
+data/*.duckdb.wal
+
+# ---- DuckDB anywhere
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp
+t.duckdb
+sim.duckdb
+
+# ---- Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Django
+backend/db.sqlite3
+backend/**/migrations/__pycache__/
+backend/staticfiles/
+backend/media/
+
+# ---- editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- backups, temp, logs
+*.bak
+*.bak_*
+*.tmp
+*.log
+copy_raw.log
+coverage.txt
+sql/views.sql.bak_*
+
+# ---- downloaded or large inputs that must stay on the external disk
+*.zip
+*.xls
+*.xlsx
+!data_register.xlsx
+*.csv
+!config/*.csv
+!tests/fixtures/**/*.csv
+!data/reports/*.csv
+*.json
+!data/ref/_manifest/**/*.json
+!tests/fixtures/**/*.json
+!config/*.json
+
+# ---- never: bills contain PHI
+*.pdf
+uploads/
+bills/
+cases/

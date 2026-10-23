@@ -1,0 +1,183 @@
+{
+  "table": "ref_hcpcs_code",
+  "output": "ref\\ref_hcpcs_code.parquet",
+  "rows": 104844,
+  "columns": [
+    "hcpcs",
+    "long_description",
+    "short_description",
+    "pricing_indicator",
+    "pricing_indicator_2",
+    "pricing_indicator_3",
+    "pricing_indicator_4",
+    "multiple_pricing_indicator",
+    "statute",
+    "xref1",
+    "xref2",
+    "xref3",
+    "xref4",
+    "xref5",
+    "coverage_code",
+    "asc_group",
+    "mog_group",
+    "mog_indicator",
+    "processing_note",
+    "betos",
+    "tos1",
+    "tos2",
+    "tos3",
+    "tos4",
+    "tos5",
+    "anesthesia_base_units",
+    "added_date",
+    "action_effective_date",
+    "termination_date",
+    "action_code",
+    "record_type",
+    "dose_from_description",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2024Q1",
+      "file": "HCPCS/2024Q1",
+      "sha256": "a038387f62f598513fc0f4089ec6c2c0a997ae527186bb24974cb31a6bbde3c5",
+      "size_bytes": 9765413,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2024_JAN_ANWEB_v4.xlsx"
+      ],
+      "rows": 8285
+    },
+    {
+      "period": "2024Q2",
+      "file": "HCPCS/2024Q2",
+      "sha256": "109489d49a2408d3a3857673d77da1fe795206ae95f7e307ad428b32800968c1",
+      "size_bytes": 9826662,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2024_APR_ANWEB_v5.xlsx"
+      ],
+      "rows": 8349
+    },
+    {
+      "period": "2024Q3",
+      "file": "HCPCS/2024Q3",
+      "sha256": "fc150c855ea163597ad2c3b8976fb4cb0b49fd7f7ca84acb326589011a1d657c",
+      "size_bytes": 9870119,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2024_JUL_ANWEB_v3.xlsx"
+      ],
+      "rows": 8416
+    },
+    {
+      "period": "2024Q4",
+      "file": "HCPCS/2024Q4",
+      "sha256": "2ffbc24cd15395dcdaf3863339071fb29375487dddeae95d8adb337471df600e",
+      "size_bytes": 9930918,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2024_OCT_ANWEB_v2.xlsx"
+      ],
+      "rows": 8474
+    },
+    {
+      "period": "2025Q1",
+      "file": "HCPCS/2025Q1",
+      "sha256": "e934df67bb95177268f1e7bea1a56e0be113eb7f8ce7ae5224bcebf33cb8bf4a",
+      "size_bytes": 10225252,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2025_JAN_ANWEB_12172024.xlsx"
+      ],
+      "rows": 8642
+    },
+    {
+      "period": "2025Q2",
+      "file": "HCPCS/2025Q2",
+      "sha256": "bdd84807958b35f6171d9c54513622c01cdba06aa1b170c5c0333c9e91ab6b35",
+      "size_bytes": 10313555,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2025_APR_ANWEB.xlsx"
+      ],
+      "rows": 8725
+    },
+    {
+      "period": "2025Q3",
+      "file": "HCPCS/2025Q3",
+      "sha256": "90d5ea712e11cba3783da7d0203d02060731986058dfd621539b4c9a98f31648",
+      "size_bytes": 10341519,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2025_JUL_ANWEB_v3.xlsx"
+      ],
+      "rows": 8770
+    },
+    {
+      "period": "2025Q4",
+      "file": "HCPCS/2025Q4",
+      "sha256": "8f80b5b076ea09c26493425dd2a7c63a0ce17c1374663ff8887dac9d921c0426",
+      "size_bytes": 10426081,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2025_OCT_ANWEB_v4.xlsx"
+      ],
+      "rows": 8846
+    },
+    {
+      "period": "2026Q1",
+      "file": "HCPCS/2026Q1",
+      "sha256": "d7e3a387555f5c054c224cb2f59ed62783e5a40162bc55764e493502747d62ad",
+      "size_bytes": 10742586,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2026_JAN_ANWEB_01122026.xlsx"
+      ],
+      "rows": 9006
+    },
+    {
+      "period": "2026Q2",
+      "file": "HCPCS/2026Q2",
+      "sha256": "d8f2b2dd1295a10b1400151e01ec63aa2604f3aa31e72f9a625416ff61534374",
+      "size_bytes": 10801860,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2026_APR_ANWEB.xlsx"
+      ],
+      "rows": 9068
+    },
+    {
+      "period": "2026Q3",
+      "file": "HCPCS/2026Q3",
+      "sha256": "0a7a74609cb9970a886cb612bebecbe7da5f61d5268328c741fcf35321dba991",
+      "size_bytes": 8598976,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2026_JUL_ANWEB_06172026.xlsx"
+      ],
+      "rows": 9109
+    },
+    {
+      "period": "2026Q4",
+      "file": "HCPCS/2026Q4",
+      "sha256": "e526da8e8616ecc09b1892b2c79a66e7b87ae07517d17d09271619c487edfb97",
+      "size_bytes": 8647486,
+      "page": "https://www.cms.gov/medicare/coding-billing/healthcare-common-procedure-system/quarterly-update",
+      "members": [
+        "HCPC2026_OCT_ANWEB_09232026.xlsx"
+      ],
+      "rows": 9154
+    }
+  ],
+  "started_at": "2026-10-22T12:30:29+00:00",
+  "finished_at": "2026-10-22T12:30:49+00:00",
+  "seconds": 20.58,
+  "warnings": [],
+  "skipped": []
+}

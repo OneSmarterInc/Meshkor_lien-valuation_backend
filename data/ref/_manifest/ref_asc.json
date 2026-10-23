@@ -1,0 +1,189 @@
+{
+  "table": "ref_asc",
+  "output": "ref\\ref_asc.parquet",
+  "rows": 82116,
+  "columns": [
+    "hcpcs",
+    "description",
+    "payment_indicator",
+    "payment_weight",
+    "payment_rate",
+    "multiple_procedure_discount",
+    "addendum",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period",
+    "payment_indicator_desc"
+  ],
+  "sources": [
+    {
+      "period": "2026Q4",
+      "file": "ASC",
+      "sha256": "af16cc05f7a46296ddc1efbcc96d3a4694ff59433b908fd564edae3f4cff4504",
+      "size_bytes": 1535942,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-Oct-2026-ASC-AA.csv",
+        "508-Version-Oct-2026-ASC-BB.csv",
+        "508-Version-Oct-2026-ASC-DD1.csv"
+      ],
+      "rows": 7413
+    },
+    {
+      "period": "2025Q4",
+      "file": "ASC2025",
+      "sha256": "265ebba2496d31cabe5ecd1393368d3e4b460988ad3cd4961f0294fed5179042",
+      "size_bytes": 2238901,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-Jul-2025-ASC-AA_2025.11.07.csv",
+        "508-Version-Jul-2025-ASC-BB_2025.11.07.csv",
+        "508-Version-Jul-2025-ASC-DD1_2025.11.07.csv"
+      ],
+      "rows": 6735
+    },
+    {
+      "period": "2024Q4",
+      "file": "ASC2024",
+      "sha256": "33b68627f4886baaa2782b306942582f1e98843d8e40fed3a203159ed57782e3",
+      "size_bytes": 2109952,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-Oct-2024-ASC-AA.csv",
+        "508-Version-Oct-2024-ASC-BB.csv",
+        "508-Version-Oct-2024-ASC-DD1.csv"
+      ],
+      "rows": 6530
+    },
+    {
+      "period": "2024Q1",
+      "file": "ASC2024A",
+      "sha256": "2608a7ca655217f906d2273431d0d7a836af5e55dda8c8b083ee35f124530793",
+      "size_bytes": 2109289,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "January 2024 ASC AA.txt",
+        "January 2024 ASC BB.txt",
+        "January 2024 ASC DD1.txt"
+      ],
+      "rows": 6414
+    },
+    {
+      "period": "2024Q2",
+      "file": "ASC2024B",
+      "sha256": "00b7a5125f6e40ff810328b3be916a5d20f8989a05f9d69ba9b8d7d51a78b7ce",
+      "size_bytes": 2094298,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508_Version_Apr_2024_ASC_AA.csv",
+        "508_Version_Apr_2024_ASC_BB.csv",
+        "508_Version_Apr_2024_ASC_DD1.csv"
+      ],
+      "rows": 6445
+    },
+    {
+      "period": "2024Q3",
+      "file": "ASC2024C",
+      "sha256": "8ac759d830f72cda7311b8ce4aeb4bf8de5a30c2e517b913af14ef80991fbba1",
+      "size_bytes": 2106683,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "July 2024 ASC AA.txt",
+        "July 2024 ASC BB.txt",
+        "July 2024 ASC DD1.txt"
+      ],
+      "rows": 6507
+    },
+    {
+      "period": "2025Q1",
+      "file": "ASC2025A",
+      "sha256": "8c57e464f81c20913f393483e4ca541c7873745d52140d703f353548274856a1",
+      "size_bytes": 2202266,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-Jan-2025-ASC-AA.01.21.25.csv",
+        "508-Version-Jan-2025-ASC-BB.01.21.25.csv",
+        "508-Version-Jan-2025-ASC-DD1.01.21.25.csv"
+      ],
+      "rows": 6641
+    },
+    {
+      "period": "2025Q2",
+      "file": "ASC2025B",
+      "sha256": "92c35a8b7e6211e8d9d683e92b96b8ff3e7a7b6e3512eca14d92151ab768cf03",
+      "size_bytes": 2224019,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-04.07.2025-ASC-AA.csv",
+        "508-Version-04.07.2025-ASC-BB.csv",
+        "508-Version-04.07.2025-ASC-DD1.csv"
+      ],
+      "rows": 6663
+    },
+    {
+      "period": "2025Q3",
+      "file": "ASC2025C",
+      "sha256": "f83806c69a3a35e197e41d178afef2eaf4e200abbd2823eb3bf763a44a75ab23",
+      "size_bytes": 2228268,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508-Version-Jul-2025-ASC-AA_2025.06.30.csv",
+        "508-Version-Jul-2025-ASC-BB_2025.06.30.csv",
+        "508-Version-Jul-2025-ASC-DD1_2025.06.30.csv"
+      ],
+      "rows": 6704
+    },
+    {
+      "period": "2026Q1",
+      "file": "ASC2026A",
+      "sha256": "51f77275e93877a903fa7a4cbe7ada7e0156e38e67bf950556be7f7805387fac",
+      "size_bytes": 2438115,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508 Version January 2026 ASC Addenda\\January 2026 ASC Addenda - Addendum AA.02.05.2026.csv",
+        "508 Version January 2026 ASC Addenda\\January 2026 ASC Addenda - Addendum BB.02.05.2026.csv",
+        "508 Version January 2026 ASC Addenda\\January 2026 ASC Addenda - Addendum DD1.02.05.2026.csv"
+      ],
+      "rows": 7326
+    },
+    {
+      "period": "2026Q2",
+      "file": "ASC2026B",
+      "sha256": "74ccae7b4005208f9e4408c17b80094ae66b7d1431ba824df8a47365bf58d2b7",
+      "size_bytes": 2450213,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508 Version April 2026 ASC Addenda\\April 2026 ASC Addenda - Addendum AA.04.02.26.csv",
+        "508 Version April 2026 ASC Addenda\\April 2026 ASC Addenda - Addendum BB.04.02.26.csv",
+        "508 Version April 2026 ASC Addenda\\April 2026 ASC Addenda - Addendum DD1.04.02.26.csv"
+      ],
+      "rows": 7358
+    },
+    {
+      "period": "2026Q3",
+      "file": "ASC2026C",
+      "sha256": "833cb837897eb290645e2a2ef2d92ff4119046771950b13480ba6cd6f31cdc8b",
+      "size_bytes": 2390114,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda",
+      "members": [
+        "508 Version of July 2026 ASC Addenda\\July 2026 ASC Addenda - Addendum AA.07.08.26.csv",
+        "508 Version of July 2026 ASC Addenda\\July 2026 ASC Addenda - Addendum BB.07.08.26.csv",
+        "508 Version of July 2026 ASC Addenda\\July 2026 ASC Addenda - Addendum DD1.07.08.26.csv"
+      ],
+      "rows": 7380
+    }
+  ],
+  "started_at": "2026-10-19T15:21:12+00:00",
+  "finished_at": "2026-10-19T15:21:13+00:00",
+  "seconds": 0.88,
+  "warnings": [
+    "1 HCPCS codes appear in both AA and BB in 2024Q4",
+    "1 HCPCS codes appear in both AA and BB in 2024Q2",
+    "1 HCPCS codes appear in both AA and BB in 2024Q3",
+    "4 HCPCS codes appear in both AA and BB in 2025Q1",
+    "1 HCPCS codes appear in both AA and BB in 2026Q1"
+  ],
+  "skipped": []
+}

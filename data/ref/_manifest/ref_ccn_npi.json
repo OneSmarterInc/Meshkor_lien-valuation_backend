@@ -1,0 +1,60 @@
+{
+  "table": "ref_ccn_npi",
+  "output": "ref\\ref_ccn_npi.parquet",
+  "rows": 25444,
+  "columns": [
+    "enrollment_id",
+    "enrollment_state",
+    "provider_type_code",
+    "provider_type_text",
+    "npi",
+    "multiple_npi_flag",
+    "ccn",
+    "organization_name",
+    "dba_name",
+    "proprietary_nonprofit",
+    "address_1",
+    "city",
+    "state",
+    "practice_location_type",
+    "subgroup_acute_care",
+    "subgroup_general",
+    "subgroup_childrens",
+    "subgroup_long_term",
+    "subgroup_psychiatric",
+    "subgroup_rehabilitation",
+    "subgroup_short_term",
+    "cah_or_hospital_ccn",
+    "zip5",
+    "match_source",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-07",
+      "file": "ENROLLMENTS",
+      "sha256": "c09f7db4dfbc2e8a2c8243d42335fca1def9261897a4a7de57f087f0ffd026c3",
+      "size_bytes": 2593677,
+      "page": "https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/hospital-enrollments",
+      "members": [
+        "Hospital_Additional_NPIs_2026.07.31.csv",
+        "Hospital_Enrollments_2026.07.31.csv"
+      ],
+      "rows": 25444
+    }
+  ],
+  "started_at": "2026-10-19T11:05:33+00:00",
+  "finished_at": "2026-10-19T11:05:34+00:00",
+  "seconds": 0.51,
+  "warnings": [
+    "0 extra CCN\u2013NPI pairs from NPPES other identifiers (not in Hospital Enrollments)",
+    "13,533 extra pairs from NPPES hospital NPIs matched on zip + address/name or city + name (4,156 NPIs match 2+ CCNs at one address; all kept)",
+    "ccn_npi_manual.csv: 2 approved rows have a CCN that is not in Hospital Enrollments (kept)",
+    "21 reviewed pairs added from config/ccn_npi_manual.csv"
+  ],
+  "skipped": []
+}

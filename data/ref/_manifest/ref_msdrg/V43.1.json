@@ -1,0 +1,66 @@
+{
+  "version": "V43.1",
+  "fiscal_year": "FY2026",
+  "effective_start": "2026-04-01",
+  "effective_end": "2026-09-30",
+  "page_url": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/ms-drg-classifications-and-software",
+  "raw_folder": "E:\\Hansavahini\\Datasetof CMS\\MSDRG\\V43.1",
+  "sources": [
+    {
+      "file": "appendix_A.txt",
+      "sha256": "f0033d6e1b243b63897e5d8b1183e2ea6f3a89c6d12b02b6deae3e59cb455235",
+      "bytes": 50634,
+      "parsed": true
+    },
+    {
+      "file": "appendix_B.txt",
+      "sha256": "cfa989daf8cc35ad77bc3e33fcffdf41f2cea8b9ed8f31934ade80a193a81693",
+      "bytes": 7446650,
+      "parsed": true
+    },
+    {
+      "file": "appendix_C.txt",
+      "sha256": "327d87f8f202ae50e5587ace87ee6b12467d591a491590d36b890616e7b5aced",
+      "bytes": 19206098,
+      "parsed": true
+    },
+    {
+      "file": "icd10-ms-drg-definitions-manual-files-v43-1.zip",
+      "sha256": "f4d610e8d211cd520e893890668711ed53e603b0f7dbc954676f8ad0fd62f248",
+      "bytes": 4662448,
+      "parsed": false,
+      "role": "definitions manual zip"
+    },
+    {
+      "file": "ms-drg-mce-v43-1-standalone-jars.zip",
+      "sha256": "f5c2eb4629d45e6b324375186b4a1ceea4424a6d3a765145bbf9eaa23622dddb",
+      "bytes": 9444921,
+      "parsed": false,
+      "role": "grouper software"
+    }
+  ],
+  "tables": {
+    "ref_msdrg": {
+      "rows": 772,
+      "output": "data\\ref\\ref_msdrg\\period=V43.1\\part-000.parquet",
+      "source_file": "appendix_A.txt"
+    },
+    "ref_msdrg_dx": {
+      "rows": 88887,
+      "output": "data\\ref\\ref_msdrg_dx\\period=V43.1\\part-000.parquet",
+      "source_file": "appendix_B.txt"
+    },
+    "ref_msdrg_cc": {
+      "rows": 18432,
+      "output": "data\\ref\\ref_msdrg_cc\\period=V43.1\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    },
+    "ref_msdrg_cc_excl": {
+      "rows": 6188,
+      "output": "data\\ref\\ref_msdrg_cc_excl\\period=V43.1\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    }
+  },
+  "loaded_at": "2026-10-22T23:16:28",
+  "seconds": 0.8
+}

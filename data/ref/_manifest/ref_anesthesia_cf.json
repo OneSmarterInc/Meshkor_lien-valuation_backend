@@ -1,0 +1,156 @@
+{
+  "table": "ref_anesthesia_cf",
+  "output": "ref\\ref_anesthesia_cf.parquet",
+  "rows": 1308,
+  "columns": [
+    "carrier",
+    "locality",
+    "locality_name",
+    "anesthesia_cf",
+    "anesthesia_cf_qp",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2024D",
+      "file": "MPFS2024D",
+      "sha256": "2604538d8f6b826502386aa20a710cf4933ea757e32b81740e5aaa5232df10e4",
+      "size_bytes": 15018443,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24d",
+      "members": [
+        "ANES2024.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2026D",
+      "file": "MPFS",
+      "sha256": "51afbeb853bce73cdf0745e779fcb6abcead2cece484b1d07e322e20f0016b72",
+      "size_bytes": 3462687,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26d",
+      "members": [
+        "ANES2026.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2025D",
+      "file": "MPFS2025",
+      "sha256": "5f5c944453462828e2bf54bea31910e6fc89caf94f505a918ce0f12a7f3028ca",
+      "size_bytes": 14105999,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25d-0",
+      "members": [
+        "ANES2025.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2024C",
+      "file": "MPFS2024",
+      "sha256": "6f333a2f554ee30c7fc1354e6fa3bc05670c3d89c40e469f48a223276fd45678",
+      "size_bytes": 14845922,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24c",
+      "members": [
+        "ANES2024.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2024B",
+      "file": "MPFS2024B",
+      "sha256": "b6ba19357dca0565213f6176f301294a66354c457eaf6e7fdd84dc8a6c0b61ab",
+      "size_bytes": 14746507,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24b",
+      "members": [
+        "ANES2024.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2024A",
+      "file": "MPFS2024A",
+      "sha256": "55c3fb57e2377f7b08340a210effd301ea3f6ffb9eb486a7233db6b85af7af39",
+      "size_bytes": 14602471,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24a",
+      "members": [
+        "ANES2024.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2025A",
+      "file": "MPFS2025A",
+      "sha256": "8bc4c67526656b782d88e5ce1929291f201261aa27db843d019b2b736e8f78fb",
+      "size_bytes": 15097059,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25a",
+      "members": [
+        "ANES2025.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2025B",
+      "file": "MPFS2025B",
+      "sha256": "1fff318c974812d97f03e4dc90bb205d432e254c3498eb507c394b3021e4c49d",
+      "size_bytes": 14076004,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25b",
+      "members": [
+        "ANES2025.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2025C",
+      "file": "MPFS2025C",
+      "sha256": "c50de068a8263312104989568788d559b8e3c601e2efe8ecfae1c5cc354ac2c9",
+      "size_bytes": 14172999,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25c",
+      "members": [
+        "ANES2025.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2026A",
+      "file": "MPFS2026A",
+      "sha256": "6eacf966b1e740d96b3df66bd108e035e2b183e3a2c84d2a803a855489359b32",
+      "size_bytes": 21902946,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26a",
+      "members": [
+        "ANES2026.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2026B",
+      "file": "MPFS2026B",
+      "sha256": "8aea553288e4480434f4321d339aaabc1da41ad8f9be04b209fa0d87f0b13af6",
+      "size_bytes": 21956701,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26b",
+      "members": [
+        "ANES2026.csv"
+      ],
+      "rows": 109
+    },
+    {
+      "period": "2026C",
+      "file": "MPFS2026C",
+      "sha256": "c7fe4e5b4bbb949966581b1095841c504aa985bf4f3f7a5e4d7847706ca9dbc0",
+      "size_bytes": 22753016,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26c",
+      "members": [
+        "ANES2026.csv"
+      ],
+      "rows": 109
+    }
+  ],
+  "started_at": "2026-10-19T15:21:08+00:00",
+  "finished_at": "2026-10-19T15:21:10+00:00",
+  "seconds": 1.36,
+  "warnings": [],
+  "skipped": []
+}

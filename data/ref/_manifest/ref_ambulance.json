@@ -1,0 +1,63 @@
+{
+  "table": "ref_ambulance",
+  "output": "ref\\ref_ambulance.parquet",
+  "rows": 3924,
+  "columns": [
+    "carrier",
+    "locality",
+    "hcpcs",
+    "rvu",
+    "gpci",
+    "base_rate",
+    "rate_urban",
+    "rate_rural",
+    "rate_super_rural",
+    "rate_rural_miles_1_17",
+    "is_mileage",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "CY2026",
+      "file": "AMBULANCE/2026",
+      "sha256": "41658147eac5a162fc344630da1e2887b9f2e25075c9e72d89faa37ef3a02921",
+      "size_bytes": 99425117,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files",
+      "members": [
+        "508-compliant-version-of-AFS2026_PUF_ext.txt"
+      ],
+      "rows": 1308
+    },
+    {
+      "period": "CY2025",
+      "file": "AMBULANCE/2025",
+      "sha256": "c1dbbdba39fe2eb24898321c5950ccf7a7edbac81f247cde9f42a2259518e12a",
+      "size_bytes": 94204258,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files",
+      "members": [
+        "508-compliant-version-AFS2025_PUF_ext.csv"
+      ],
+      "rows": 1308
+    },
+    {
+      "period": "CY2024",
+      "file": "AMBULANCE/2024",
+      "sha256": "41f8221a775cac3d96da6fdc3026b8e8c7d455d539a6296ac82aadd95fce7d20",
+      "size_bytes": 93025445,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files",
+      "members": [
+        "508-Version-AFS2024__PUF.csv"
+      ],
+      "rows": 1308
+    }
+  ],
+  "started_at": "2026-10-19T10:38:23+00:00",
+  "finished_at": "2026-10-19T10:38:23+00:00",
+  "seconds": 0.05,
+  "warnings": [],
+  "skipped": []
+}

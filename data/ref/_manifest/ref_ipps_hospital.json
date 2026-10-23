@@ -1,0 +1,93 @@
+{
+  "table": "ref_ipps_hospital",
+  "output": "ref\\ref_ipps_hospital.parquet",
+  "rows": 9330,
+  "columns": [
+    "ccn",
+    "wage_index",
+    "cola",
+    "resident_to_bed_ratio",
+    "beds",
+    "ime_operating",
+    "ime_capital",
+    "dsh_patient_pct",
+    "dsh_operating",
+    "dsh_capital",
+    "ucp_factor",
+    "ucp_per_claim",
+    "operating_ccr",
+    "capital_ccr",
+    "hospital_specific_rate",
+    "medicare_bills",
+    "gaf",
+    "capital_cola",
+    "operating_outlier_pct",
+    "vbp_factor",
+    "hrrp_factor",
+    "low_volume_factor",
+    "case_mix_index",
+    "hospital_name",
+    "cbsa_geographic",
+    "cbsa_payment",
+    "fips_county",
+    "urban_rural_geographic",
+    "reclass_status",
+    "provider_type",
+    "ownership",
+    "mdh_flag",
+    "quality_reduction",
+    "ehr_reduction",
+    "state",
+    "operating_labor_rate",
+    "operating_nonlabor_rate",
+    "capital_federal_rate",
+    "fiscal_year",
+    "operating_base_rate",
+    "capital_base_rate",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "FY2027",
+      "file": "IPPS/FY2027/fy-2027-ipps-fr-cn-impact-file.zip",
+      "sha256": "6e51b1015b6c5c9320a3cb3a086450787f8fef3723d5cc382f6aa64b2c716f17",
+      "size_bytes": 2961688,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2027-ipps-final-rule-home-page",
+      "members": [
+        "FY 2027 IPPS Impact File - Correction Notice.txt"
+      ],
+      "rows": 3075
+    },
+    {
+      "period": "FY2026",
+      "file": "IPPS/FY2026/fy_2026_ipps_final_rule_impact_file.zip",
+      "sha256": "c19ae04778a7018fcb626692bb6fc9e5ddb29b6f73c2256727f7299fd9df9150",
+      "size_bytes": 1626305,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2026-ipps-final-rule-home-page",
+      "members": [
+        "FY 2026 IPPS Final Rule Impact File.txt"
+      ],
+      "rows": 3103
+    },
+    {
+      "period": "FY2025",
+      "file": "IPPS/FY2025/fy_2025_ipps_impact_file-fr-cn-ifc.zip",
+      "sha256": "1b650a7f96eef45938e3adff3d6fcea7fb0f1d1805807ae04266e8ee47270694",
+      "size_bytes": 4782899,
+      "page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2025-ipps-final-rule-home-page",
+      "members": [
+        "FY 2025 IPPS Impact File - Interim Final Action with Comment.txt"
+      ],
+      "rows": 3152
+    }
+  ],
+  "started_at": "2026-10-18T10:15:20+00:00",
+  "finished_at": "2026-10-18T10:15:20+00:00",
+  "seconds": 0.17,
+  "warnings": [],
+  "skipped": []
+}

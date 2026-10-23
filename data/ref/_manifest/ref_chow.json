@@ -1,0 +1,53 @@
+{
+  "table": "ref_chow",
+  "output": "ref\\ref_chow.parquet",
+  "rows": 779,
+  "columns": [
+    "enrollment_id_buyer",
+    "enrollment_state_buyer",
+    "provider_type_code_buyer",
+    "provider_type_text_buyer",
+    "npi_buyer",
+    "multiple_npi_flag_buyer",
+    "ccn_buyer",
+    "associate_id_buyer",
+    "organization_name_buyer",
+    "doing_business_as_name_buyer",
+    "chow_type_code",
+    "chow_type_text",
+    "chow_effective_date",
+    "enrollment_id_seller",
+    "enrollment_state_seller",
+    "provider_type_code_seller",
+    "provider_type_text_seller",
+    "npi_seller",
+    "multiple_npi_flag_seller",
+    "ccn_seller",
+    "associate_id_seller",
+    "organization_name_seller",
+    "doing_business_as_name_seller",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-09",
+      "file": "OWNERSHIP/2026-10",
+      "sha256": "f60a1b48967dc9f4a0a2438d33443cc5124522cc347498a259f1a0e94827f9bd",
+      "size_bytes": 37265344,
+      "page": "https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/hospital-change-of-ownership",
+      "members": [
+        "Hospital Change of Ownership\\Hospital Change of Ownership\\2026-Q3\\Hospital_CHOW_2026.09.29.csv"
+      ],
+      "rows": 779
+    }
+  ],
+  "started_at": "2026-10-21T12:25:16+00:00",
+  "finished_at": "2026-10-21T12:25:16+00:00",
+  "seconds": 0.15,
+  "warnings": [],
+  "skipped": []
+}

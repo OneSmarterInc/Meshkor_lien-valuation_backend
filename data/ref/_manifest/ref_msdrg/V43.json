@@ -1,0 +1,66 @@
+{
+  "version": "V43",
+  "fiscal_year": "FY2026",
+  "effective_start": "2025-10-01",
+  "effective_end": "2026-03-31",
+  "page_url": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/ms-drg-classifications-and-software",
+  "raw_folder": "E:\\Hansavahini\\Datasetof CMS\\MSDRG\\V43",
+  "sources": [
+    {
+      "file": "appendix_A.txt",
+      "sha256": "f90e2f93ee6f926dfa7d667210d007caed7c0327abea1148aff1be98bca8b7f9",
+      "bytes": 50635,
+      "parsed": true
+    },
+    {
+      "file": "appendix_B.txt",
+      "sha256": "cfa989daf8cc35ad77bc3e33fcffdf41f2cea8b9ed8f31934ade80a193a81693",
+      "bytes": 7446650,
+      "parsed": true
+    },
+    {
+      "file": "appendix_C.txt",
+      "sha256": "b7c0b6f5d68e4ade5018acbc47f02e7d23dd134888f0f244049fc0a808a7ec9a",
+      "bytes": 16993204,
+      "parsed": true
+    },
+    {
+      "file": "icd10-ms-drg-definitions-manual-files-v43.zip",
+      "sha256": "ab621e30e76c83cfbfbffc5d9b1e278726880798b26e01741e04e5d83dbd6583",
+      "bytes": 4621896,
+      "parsed": false,
+      "role": "definitions manual zip"
+    },
+    {
+      "file": "ms-drg-mce-v43-standalone-jars.zip",
+      "sha256": "26a9c1346933ac95d45e9861a722d2753781ad31546029f42472a51688572fc6",
+      "bytes": 9038890,
+      "parsed": false,
+      "role": "grouper software"
+    }
+  ],
+  "tables": {
+    "ref_msdrg": {
+      "rows": 772,
+      "output": "data\\ref\\ref_msdrg\\period=V43\\part-000.parquet",
+      "source_file": "appendix_A.txt"
+    },
+    "ref_msdrg_dx": {
+      "rows": 88887,
+      "output": "data\\ref\\ref_msdrg_dx\\period=V43\\part-000.parquet",
+      "source_file": "appendix_B.txt"
+    },
+    "ref_msdrg_cc": {
+      "rows": 18432,
+      "output": "data\\ref\\ref_msdrg_cc\\period=V43\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    },
+    "ref_msdrg_cc_excl": {
+      "rows": 6188,
+      "output": "data\\ref\\ref_msdrg_cc_excl\\period=V43\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    }
+  },
+  "loaded_at": "2026-10-22T23:16:28",
+  "seconds": 0.8
+}

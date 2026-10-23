@@ -1,0 +1,205 @@
+{
+  "table": "ref_ndc_hcpcs",
+  "output": "ref\\ref_ndc_hcpcs.parquet",
+  "rows": 95545,
+  "columns": [
+    "hcpcs",
+    "description",
+    "labeler",
+    "ndc",
+    "drug_name",
+    "dosage",
+    "ndc11",
+    "pkg_size",
+    "pkg_qty",
+    "bill_units",
+    "bill_units_pkg",
+    "crosswalk_type",
+    "header_line",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2024Q1",
+      "file": "ASP/2024Q1",
+      "sha256": "5e9560bc0a375755b3a049b30cf1df35deaaa1422d2ff371f6cd3e7b4b8ca50f",
+      "size_bytes": 2857039,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Verison of January 2024 AWP NDC-HCPCS Crosswalk 120623.csv",
+        "section 508 version of January 2024 ASP NDC-HCPCS Crosswalk 122023.csv",
+        "section 508 version of January 2024 NOC NDC-HCPCS Crosswalk 120723.csv",
+        "section 508 version of January 2024 OPPS NDC-HCPCS Crosswalk 120723.csv"
+      ],
+      "rows": 7408
+    },
+    {
+      "period": "2024Q2",
+      "file": "ASP/2024Q2",
+      "sha256": "23480cb404ef36e428955aace641b415b26699978619d997dea7aad3f05be49c",
+      "size_bytes": 2909737,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of April 2024 AWP NDC-HCPCS Crosswalk 031224.csv",
+        "section 508 Version of April 2024 OPPS NDC-HCPCS Crosswalk 032024.csv",
+        "section 508 version of April 2024 ASP NDC-HCPCS Crosswalk 032124.csv",
+        "section 508 version of April 2024 NOC NDC-HCPCS Crosswalk 030724.csv"
+      ],
+      "rows": 7438
+    },
+    {
+      "period": "2024Q3",
+      "file": "ASP/2024Q3",
+      "sha256": "147d7640ffdc35e4f54a9f2e1cc3e3b6cd1dd71b2f8a06bf4cefc14dd17658b7",
+      "size_bytes": 3032818,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of July 2024 AWP NDC-HCPCS Crosswalk 052124.csv",
+        "section 508 version of July 2024 ASP NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of July 2024 NOC NDC-HCPCS Crosswalk 060624.csv",
+        "section 508 version of July 2024 OPPS NDC-HCPCS Crosswalk 061824.csv"
+      ],
+      "rows": 7909
+    },
+    {
+      "period": "2024Q4",
+      "file": "ASP/2024Q4",
+      "sha256": "b3b8a01ee581954b00043b217385536d6c08efca924b5366ee78ead706f424c6",
+      "size_bytes": 3128920,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "section 508 version of October 2024 ASP NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of October 2024 AWP NDC-HCPCS Crosswalk 091224.csv",
+        "section 508 version of October 2024 NOC NDC-HCPCS Crosswalk 090624.csv",
+        "section 508 version of October 2024 OPPS NDC-HCPCS Crosswalk 091224.csv",
+        "section 508 version of October 2024 PrEP NDC-HCPCS Crosswalk 102224.csv"
+      ],
+      "rows": 8140
+    },
+    {
+      "period": "2025Q1",
+      "file": "ASP/2025Q1",
+      "sha256": "8f78af585136166ce40267aee3342d45787316633cfda4ec116f9d4607c8963b",
+      "size_bytes": 3025979,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of January 2025 AWP NDC-HCPCS Crosswalk.csv",
+        "section 508 version of January 2025 ASP NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of January 2025 NOC NDC-HCPCS Crosswalk 120924.csv",
+        "section 508 version of January 2025 OPPS NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of January 2025 PrEP NDC-HCPCS Crosswalk 120924.csv"
+      ],
+      "rows": 7838
+    },
+    {
+      "period": "2025Q2",
+      "file": "ASP/2025Q2",
+      "sha256": "b64130c917a32f4a3285b984c0f6a851be02c62198e59b5ae35a2db60eb8ab37",
+      "size_bytes": 3160851,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of April 2025 AWP NDC-HCPCS Crosswalk updated 051325.csv",
+        "section 508 version of April 2025 ASP NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of April 2025 NOC NDC-HCPCS Crosswalk 030725.csv",
+        "section 508 version of April 2025 OPPS NDC-HCPCS Crosswalk updated 052725.csv",
+        "section 508 version of April 2025 PrEP NDC-HCPCS Crosswalk 030725.csv"
+      ],
+      "rows": 8204
+    },
+    {
+      "period": "2025Q3",
+      "file": "ASP/2025Q3",
+      "sha256": "2731498d1a69d0f5ab79912640a9202473f0f9aedb328eeeae28180f413b7c5a",
+      "size_bytes": 5174050,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of July 2025 AWP NDC-HCPCS Crosswalk.csv",
+        "section 508 version of July 2025 ASP NDC-HCPCS Crosswalk 063025.csv",
+        "section 508 version of July 2025 NOC NDC-HCPCS Crosswalk 060325.csv",
+        "section 508 version of July 2025 OPPS NDC-HCPCS Crosswalk 062025.csv",
+        "section 508 version of July 2025 PrEP NDC-HCPCS Crosswalk 052125.csv"
+      ],
+      "rows": 8473
+    },
+    {
+      "period": "2025Q4",
+      "file": "ASP/2025Q4",
+      "sha256": "6fd67a403973d969a070c42d3d4b74c06a8964d107c6259a5460358177ffff71",
+      "size_bytes": 4760093,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of October 2025 AWP NDC-HCPCS Crosswalk v2.csv",
+        "Section 508 Version of October 2025 PrEP NDC-HCPCS Crosswalk 081325.csv",
+        "section 508 version of October 2025 ASP NDC-HCPCS Crosswalk 090525.csv",
+        "section 508 version of October 2025 NOC NDC-HCPCS Crosswalk 090525.csv",
+        "section 508 version of October 2025 OPPS NDC-HCPCS Crosswalk 090525.csv"
+      ],
+      "rows": 8880
+    },
+    {
+      "period": "2026Q1",
+      "file": "ASP/2026Q1",
+      "sha256": "ee3a4b9a4a2690d7342a8c9bd2483343f09b65e2c289f6148c5d6afeb4cfc4f7",
+      "size_bytes": 2902524,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of January 2026 AWP NDC-HCPCS Crosswalk v2.csv",
+        "section 508 version of January 2026 ASP NDC-HCPCS Crosswalk 033026.csv",
+        "section 508 version of January 2026 OPPS NDC-HCPCS Crosswalk updated 031026.csv",
+        "section 508 version of January 2026 PrEP NDC-HCPCS Crosswalk 112125.csv"
+      ],
+      "rows": 7674
+    },
+    {
+      "period": "2026Q2",
+      "file": "ASP/2026Q2",
+      "sha256": "faa5d054d262ddc31704deee7d782ff25ebdb4fbb64f59592288dba22cb1756c",
+      "size_bytes": 2968730,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 April 2026 PrEP NDC-HCPCS Crosswalk 031026.csv",
+        "section 508 Version of April 2026 AWP NDC-HCPCS Crosswalk.csv",
+        "section 508 verison of April 2026 ASP NDC-HCPCS Crosswalk 033026.csv",
+        "section 508 version of April 2026 OPPS NDC-HCPCS Crosswalk 030926.csv"
+      ],
+      "rows": 7787
+    },
+    {
+      "period": "2026Q3",
+      "file": "ASP/2026Q3",
+      "sha256": "a345acd5d3750d08fd514854e823eb0f11eb3146b5c65d8f52f0120f53ce467f",
+      "size_bytes": 2276780,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of July 2026 AWP NDC-HCPCS Crosswalk.csv",
+        "Section 508 version of July 2026 PrEP NDC-HCPCS Crosswalk 060226.csv",
+        "section 508 version of July 2026 ASP NDC-HCPCS Crosswalk 061726.csv",
+        "section 508 version of July 2026 OPPS NDC-HCPCS Crosswalk 061726.csv"
+      ],
+      "rows": 7896
+    },
+    {
+      "period": "2026Q4",
+      "file": "ASP/2026Q4",
+      "sha256": "0d1e10450c17861246c9acd2d2dd067d8fe2674f7d0bbd6cc9539cda5d63688f",
+      "size_bytes": 3015020,
+      "page": "https://www.cms.gov/medicare/payment/part-b-drugs/asp-pricing-files",
+      "members": [
+        "Section 508 Version of October 2026 AWP NDC-HCPCS Crosswalk.csv",
+        "Section 508 version of October 2026 PrEP NDC-HCPCS Crosswalk 08132026.csv",
+        "section 508 version of October 2026 ASP NDC-HCPCS Crosswalk 091126.csv",
+        "section 508 version of October 2026 OPPS NDC-HCPCS Crosswalk 090426.csv"
+      ],
+      "rows": 7898
+    }
+  ],
+  "started_at": "2026-10-22T12:30:28+00:00",
+  "finished_at": "2026-10-22T12:30:29+00:00",
+  "seconds": 0.92,
+  "warnings": [],
+  "skipped": []
+}

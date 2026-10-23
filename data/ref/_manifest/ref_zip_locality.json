@@ -1,0 +1,70 @@
+{
+  "table": "ref_zip_locality",
+  "output": "ref\\ref_zip_locality.parquet",
+  "rows": 171821,
+  "columns": [
+    "state",
+    "zip5",
+    "carrier",
+    "locality",
+    "rural_indicator",
+    "lab_cb_locality",
+    "plus_four_flag",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-08",
+      "file": "ZIPLOC/2026",
+      "sha256": "a2060fccf48a1bed8834e70cc2c8f9ce36fd49a1389fb8835e861d9a157d3715",
+      "size_bytes": 99114461,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules",
+      "members": [
+        "ZIP5_OCT2026.txt"
+      ],
+      "rows": 42957
+    },
+    {
+      "period": "2026Q4",
+      "file": "AMBULANCE/2026",
+      "sha256": "41658147eac5a162fc344630da1e2887b9f2e25075c9e72d89faa37ef3a02921",
+      "size_bytes": 99425117,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance",
+      "members": [
+        "ZIP5_OCT2026.txt"
+      ],
+      "rows": 42957
+    },
+    {
+      "period": "2025EOY",
+      "file": "AMBULANCE/2025",
+      "sha256": "c1dbbdba39fe2eb24898321c5950ccf7a7edbac81f247cde9f42a2259518e12a",
+      "size_bytes": 94204258,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance",
+      "members": [
+        "ZIP5_DEC2025_FINAL.txt"
+      ],
+      "rows": 42956
+    },
+    {
+      "period": "2024EOY",
+      "file": "AMBULANCE/2024",
+      "sha256": "41f8221a775cac3d96da6fdc3026b8e8c7d455d539a6296ac82aadd95fce7d20",
+      "size_bytes": 93025445,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/ambulance",
+      "members": [
+        "ZIP5_DEC2024_FINAL.txt"
+      ],
+      "rows": 42951
+    }
+  ],
+  "started_at": "2026-10-19T16:20:58+00:00",
+  "finished_at": "2026-10-19T16:20:58+00:00",
+  "seconds": 0.26,
+  "warnings": [],
+  "skipped": []
+}

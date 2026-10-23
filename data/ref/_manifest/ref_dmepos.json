@@ -1,0 +1,162 @@
+{
+  "table": "ref_dmepos",
+  "output": "ref\\ref_dmepos.parquet",
+  "rows": 2224675,
+  "columns": [
+    "hcpcs",
+    "modifier",
+    "modifier2",
+    "jurisdiction",
+    "category",
+    "ceiling",
+    "floor",
+    "description",
+    "state",
+    "fee_nonrural",
+    "fee_rural",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026D",
+      "file": "DMEPOS/2026D",
+      "sha256": "b87e69dda8d536c7ab0068d717d6b410c833b0d4434ac7a99347cf2ea5cbf5ec",
+      "size_bytes": 34458647,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-d",
+      "members": [
+        "DMEPOS_OCT.csv"
+      ],
+      "rows": 187514
+    },
+    {
+      "period": "2025D",
+      "file": "DMEPOS/2025D",
+      "sha256": "e0fbe6dcdb1c76ac351b793cad3fca50b6acd0d09a1af366d14e9e7fa6c6d6a0",
+      "size_bytes": 29978036,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-d",
+      "members": [
+        "DMEPOS25_Oct.csv"
+      ],
+      "rows": 186136
+    },
+    {
+      "period": "2024D",
+      "file": "DMEPOS/2024D",
+      "sha256": "bab7fd9782ea66047153445ff01f8b7770636f8e905e238d7cde1791328ddf8e",
+      "size_bytes": 29316359,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-d",
+      "members": [
+        "DMEPOS_OCT.csv"
+      ],
+      "rows": 184122
+    },
+    {
+      "period": "2024A",
+      "file": "DMEPOS/2024A",
+      "sha256": "a8c8018778cebb5e5131965aea1a89b3f00699ca27526e37392c316fd8d89cf7",
+      "size_bytes": 34500490,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-a",
+      "members": [
+        "DMEPOS_JAN.csv"
+      ],
+      "rows": 182691
+    },
+    {
+      "period": "2024B",
+      "file": "DMEPOS/2024B",
+      "sha256": "52997b1ee2bf8e83330f28bf1d04549ee883beba4c7dae05c928d274b84acc8a",
+      "size_bytes": 34613688,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-b",
+      "members": [
+        "DMEPOS_APR.csv"
+      ],
+      "rows": 183327
+    },
+    {
+      "period": "2024C",
+      "file": "DMEPOS/2024C",
+      "sha256": "77ee941845a5a23abe5563e10fab72f6fbf1767bde89061675a981c4fa74601a",
+      "size_bytes": 34287546,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-c",
+      "members": [
+        "DMEPOS_Jul.csv"
+      ],
+      "rows": 183327
+    },
+    {
+      "period": "2025A",
+      "file": "DMEPOS/2025A",
+      "sha256": "9c9d9d0584b1ee9c9663e8e325b69e9cce196501fb93cce3ff6131d67641d39a",
+      "size_bytes": 34818639,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-a",
+      "members": [
+        "DMEPOS_JAN.csv"
+      ],
+      "rows": 184811
+    },
+    {
+      "period": "2025B",
+      "file": "DMEPOS/2025B",
+      "sha256": "33454976cd03f9cd3678753d737fbea104e9f99c4a2340a4711f9f7eff28fcc9",
+      "size_bytes": 34508835,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-b",
+      "members": [
+        "DMEPOS25_APR.csv"
+      ],
+      "rows": 186083
+    },
+    {
+      "period": "2025C",
+      "file": "DMEPOS/2025C",
+      "sha256": "8005fbc76747ae80632c2af81bdde1afcd25cbb1f7f937a4cdf142431f4cc86c",
+      "size_bytes": 35290195,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-c",
+      "members": [
+        "DMEPOS25_JUL.csv"
+      ],
+      "rows": 186083
+    },
+    {
+      "period": "2026A",
+      "file": "DMEPOS/2026A",
+      "sha256": "ba175cc113bf2a57d2dc5b842bec26f5551936a1ae48e84c47f40895f34daece",
+      "size_bytes": 35491980,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-a",
+      "members": [
+        "DMEPOS26_JAN.csv"
+      ],
+      "rows": 186295
+    },
+    {
+      "period": "2026B",
+      "file": "DMEPOS/2026B",
+      "sha256": "5b65b9f15a0c6f5517dc15731c9ce7687b776842c1beb611126f8d6119ec17f1",
+      "size_bytes": 35287849,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-b",
+      "members": [
+        "DMEPOS_APR.csv"
+      ],
+      "rows": 187143
+    },
+    {
+      "period": "2026C",
+      "file": "DMEPOS/2026C",
+      "sha256": "d367d30b6d036dfe986dea6228e78591a43afa9b81413d6ba517a43e82f45bb8",
+      "size_bytes": 35249811,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-c",
+      "members": [
+        "DMEPOS_JUL.csv"
+      ],
+      "rows": 187143
+    }
+  ],
+  "started_at": "2026-10-19T15:21:14+00:00",
+  "finished_at": "2026-10-19T15:21:17+00:00",
+  "seconds": 3.3,
+  "warnings": [],
+  "skipped": []
+}

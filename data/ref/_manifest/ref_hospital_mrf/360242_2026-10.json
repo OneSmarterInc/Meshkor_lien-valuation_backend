@@ -1,0 +1,66 @@
+{
+  "table": "ref_hospital_mrf",
+  "ccn": "360242",
+  "period": "2026-10",
+  "hospital_name": "ARTHUR G JAMES CANCER HOSPITAL AND RESEARCH INSTITUTE",
+  "ein": "31-1322863",
+  "type2_npis": "1124127683",
+  "mrf_version": "3.0.0",
+  "last_updated_on": "2026-07-01",
+  "effective_start": "2026-07-01",
+  "effective_end": "9999-12-31",
+  "page_url": "https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists",
+  "raw_folder": "E:\\Hansavahini\\Datasetof CMS\\MRF\\2026-10\\360242",
+  "sources": [
+    {
+      "file": "31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.csv",
+      "sha256": "0e4e71f43b8956194dafa93b190bb8ea426c31e203880b3da306550a3a9d5c88",
+      "bytes": 866975092
+    },
+    {
+      "file": "31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.csv.zip",
+      "sha256": "80786be09aac916e082dbf49a4887c3f25f661949e4e67817d9e47c2350adcaa",
+      "bytes": 39277289
+    }
+  ],
+  "columns_in_file": [
+    "description",
+    "code|1",
+    "code|1|type",
+    "code|2",
+    "code|2|type",
+    "code|3",
+    "code|3|type",
+    "modifiers",
+    "setting",
+    "drug_unit_of_measurement",
+    "drug_type_of_measurement",
+    "standard_charge|gross",
+    "standard_charge|discounted_cash",
+    "payer_name",
+    "plan_name",
+    "standard_charge|negotiated_dollar",
+    "standard_charge|negotiated_percentage",
+    "standard_charge|negotiated_algorithm",
+    "median_amount",
+    "10th_percentile",
+    "90th_percentile",
+    "count",
+    "standard_charge|methodology",
+    "standard_charge|min",
+    "standard_charge|max",
+    "additional_generic_notes"
+  ],
+  "header_lines_skipped": 2,
+  "encoding": "utf-8 (cleaned copy)",
+  "warnings": [
+    "188 lines were not valid UTF-8; decoded as cp1252 into 31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.utf8.csv. Only description text is affected; codes and prices are unchanged."
+  ],
+  "read_path": "data\\work\\31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.utf8.csv",
+  "rows": 4470209,
+  "distinct_payers": 26,
+  "output": "data\\ref\\ref_hospital_mrf\\ccn=360242\\period=2026-10\\part-000.parquet",
+  "output_bytes": 22614041,
+  "loaded_at": "2026-10-22T16:52:33",
+  "seconds": 11.4
+}

@@ -1,0 +1,48 @@
+{
+  "table": "ref_code_specialty",
+  "output": "ref\\ref_code_specialty.parquet",
+  "rows": 167634,
+  "columns": [
+    "hcpcs",
+    "medicare_specialty",
+    "taxonomy",
+    "services",
+    "providers",
+    "specialty_services",
+    "specialty_providers",
+    "code_total_services",
+    "specialty_rank",
+    "specialty_share",
+    "plausible",
+    "taxonomy_share_in_specialty",
+    "taxonomy_share_of_code",
+    "data_year",
+    "rule_min_share",
+    "rule_top_n",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "CY2024",
+      "file": "UTILIZATION",
+      "sha256": "0893456869f155e08f18ef630503d02676cd5c6ef9e4f7c42d89f45a29d7fd48",
+      "size_bytes": 3250429145,
+      "page": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners/medicare-physician-other-practitioners-by-provider-and-service",
+      "members": [
+        "PHY_R26_P05_V10_D24_Prov_Svc.csv"
+      ],
+      "rows": 167634
+    }
+  ],
+  "started_at": "2026-10-18T10:15:21+00:00",
+  "finished_at": "2026-10-18T10:15:28+00:00",
+  "seconds": 6.13,
+  "warnings": [
+    "0.2% of services have an NPI not found in ref_provider (taxonomy empty)"
+  ],
+  "skipped": []
+}

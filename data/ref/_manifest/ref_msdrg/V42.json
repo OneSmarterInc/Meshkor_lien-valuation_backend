@@ -1,0 +1,66 @@
+{
+  "version": "V42",
+  "fiscal_year": "FY2025",
+  "effective_start": "2024-10-01",
+  "effective_end": "2025-03-31",
+  "page_url": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/ms-drg-classifications-and-software",
+  "raw_folder": "E:\\Hansavahini\\Datasetof CMS\\MSDRG\\V42",
+  "sources": [
+    {
+      "file": "appendix_A.txt",
+      "sha256": "eef6784349c455818bbf626758a425d6a917921b6b8dbd1ba17b19a750ad1c4d",
+      "bytes": 50621,
+      "parsed": true
+    },
+    {
+      "file": "appendix_B.txt",
+      "sha256": "ae9d00756e8dc74f351dea1e3156b9ec3d3f6bb9f375698c0004431094cd22ca",
+      "bytes": 7394418,
+      "parsed": true
+    },
+    {
+      "file": "appendix_C.txt",
+      "sha256": "bbb70a9d55fee8d3960ad2357e59e7d25b7334e9c0fb872cd5cdafcee2be6cd6",
+      "bytes": 16231779,
+      "parsed": true
+    },
+    {
+      "file": "msdrgv420icd10r0definitionsmanualtext.zip",
+      "sha256": "5e2fdd3f47dc83fc9d1eacb7136e2ce3f03c105a3cecdf67ec5f7e3778c49fc5",
+      "bytes": 4548799,
+      "parsed": false,
+      "role": "definitions manual zip"
+    },
+    {
+      "file": "standalone-jars.zip",
+      "sha256": "9dc8c9394859ba785e3202f555dcd093052ecae86bdc4edd404d30443703c9dd",
+      "bytes": 7922736,
+      "parsed": false,
+      "role": "grouper software"
+    }
+  ],
+  "tables": {
+    "ref_msdrg": {
+      "rows": 773,
+      "output": "data\\ref\\ref_msdrg\\period=V42\\part-000.parquet",
+      "source_file": "appendix_A.txt"
+    },
+    "ref_msdrg_dx": {
+      "rows": 88169,
+      "output": "data\\ref\\ref_msdrg_dx\\period=V42\\part-000.parquet",
+      "source_file": "appendix_B.txt"
+    },
+    "ref_msdrg_cc": {
+      "rows": 18305,
+      "output": "data\\ref\\ref_msdrg_cc\\period=V42\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    },
+    "ref_msdrg_cc_excl": {
+      "rows": 6152,
+      "output": "data\\ref\\ref_msdrg_cc_excl\\period=V42\\part-000.parquet",
+      "source_file": "appendix_C.txt"
+    }
+  },
+  "loaded_at": "2026-10-22T23:16:26",
+  "seconds": 0.8
+}

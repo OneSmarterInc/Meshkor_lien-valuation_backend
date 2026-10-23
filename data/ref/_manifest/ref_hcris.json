@@ -1,0 +1,91 @@
+{
+  "table": "ref_hcris",
+  "output": "ref\\ref_hcris.parquet",
+  "rows": 16049,
+  "columns": [
+    "rpt_rec_num",
+    "ccn",
+    "npi",
+    "provider_control_type",
+    "report_status_code",
+    "fy_begin",
+    "fy_end",
+    "processed_date",
+    "medicare_utilization",
+    "total_costs",
+    "total_charges",
+    "beds",
+    "state",
+    "facility_type",
+    "report_status",
+    "cost_to_charge_ratio",
+    "hcris_file_year",
+    "effective_start",
+    "effective_end",
+    "source_file",
+    "source_sha256",
+    "period",
+    "fy_end_year",
+    "is_primary"
+  ],
+  "sources": [
+    {
+      "period": "FY2023",
+      "file": "HCRIS/HOSP10FY2023",
+      "sha256": "c66a0f16835963386fea56ccdd7fcfa0eabfb538dcb9b0f524ae3222bd606a9e",
+      "size_bytes": 825172874,
+      "page": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year",
+      "members": [
+        "HOSP10_2023_nmrc.csv",
+        "HOSP10_2023_rpt.csv"
+      ],
+      "rows": 6109
+    },
+    {
+      "period": "FY2024",
+      "file": "HCRIS/HOSP10FY2024",
+      "sha256": "f288f704f227c0b263b91630d7deb9a24f47a00157da4c974f6b4bd89ca362fa",
+      "size_bytes": 819601757,
+      "page": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year",
+      "members": [
+        "HOSP10_2024_nmrc.csv",
+        "HOSP10_2024_rpt.csv"
+      ],
+      "rows": 6113
+    },
+    {
+      "period": "FY2025",
+      "file": "HCRIS/HOSP10FY2025",
+      "sha256": "5aca20a2c5d3f540117cc096e2fd3c372da5558cb7bd4ad297e4ef4c27fdff03",
+      "size_bytes": 505081278,
+      "page": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year",
+      "members": [
+        "HOSP10_2025_nmrc.csv",
+        "HOSP10_2025_rpt.csv"
+      ],
+      "rows": 3805
+    },
+    {
+      "period": "FY2026",
+      "file": "HCRIS/HOSP10FY2026",
+      "sha256": "de7fbd886285fe677f32600a8dcfc8faa32cda3d3bcf4cc1d42d3853fbadeb44",
+      "size_bytes": 1907596,
+      "page": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year",
+      "members": [
+        "HOSP10_2026_nmrc.csv",
+        "HOSP10_2026_rpt.csv"
+      ],
+      "rows": 22
+    }
+  ],
+  "started_at": "2026-10-17T08:23:49+00:00",
+  "finished_at": "2026-10-17T08:23:55+00:00",
+  "seconds": 5.77,
+  "warnings": [
+    "FY2023: 122 reports with cost-to-charge ratio outside 0.05\u20131.5",
+    "FY2024: 126 reports with cost-to-charge ratio outside 0.05\u20131.5",
+    "FY2025: 61 reports with cost-to-charge ratio outside 0.05\u20131.5",
+    "166 hospital-years have 2+ reports for different periods (fiscal-year change or change of ownership); all kept"
+  ],
+  "skipped": []
+}

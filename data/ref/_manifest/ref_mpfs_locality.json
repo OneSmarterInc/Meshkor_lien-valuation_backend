@@ -1,0 +1,35 @@
+{
+  "table": "ref_mpfs_locality",
+  "output": "ref\\ref_mpfs_locality.parquet",
+  "rows": 110,
+  "columns": [
+    "carrier",
+    "locality",
+    "state_name",
+    "fee_schedule_area",
+    "counties",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026D",
+      "file": "MPFS",
+      "sha256": "51afbeb853bce73cdf0745e779fcb6abcead2cece484b1d07e322e20f0016b72",
+      "size_bytes": 3462687,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26d",
+      "members": [
+        "26LOCCO.csv"
+      ],
+      "rows": 110
+    }
+  ],
+  "started_at": "2026-10-17T08:23:47+00:00",
+  "finished_at": "2026-10-17T08:23:47+00:00",
+  "seconds": 0.06,
+  "warnings": [],
+  "skipped": []
+}

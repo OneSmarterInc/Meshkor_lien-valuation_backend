@@ -1,0 +1,32 @@
+{
+  "table": "ref_anesthesia_base_units",
+  "output": "ref\\ref_anesthesia_base_units.parquet",
+  "rows": 276,
+  "columns": [
+    "hcpcs",
+    "base_units",
+    "source_file",
+    "source_sha256",
+    "effective_start",
+    "effective_end",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "CY2022",
+      "file": "ANESTHESIA",
+      "sha256": "9bf71b437a1061b1befbd9204edbf1e7b483775f15647c467e68890fc5f5e1f2",
+      "size_bytes": 40823,
+      "page": "https://www.cms.gov/medicare/payment/fee-schedules/physician/anesthesiologists-center",
+      "members": [
+        "Section 508 compliant version of CY_2022_Anesthesia_Base_Units_110921.txt"
+      ],
+      "rows": 276
+    }
+  ],
+  "started_at": "2026-10-18T10:15:20+00:00",
+  "finished_at": "2026-10-18T10:15:20+00:00",
+  "seconds": 0.03,
+  "warnings": [],
+  "skipped": []
+}
