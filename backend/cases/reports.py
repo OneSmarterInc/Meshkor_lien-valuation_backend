@@ -36,6 +36,17 @@ def build(case: Case, basis: str = "service_date") -> dict:
     ]
     if t.get("cash") is not None:
         summary.insert(3, {"benchmark": "Hospital's cash price", "total": t["cash"], "pct_of_billed": _pct(t["cash"], billed)})
+    cov = (case.totals or {}).get("coverage") or {}
+    keys = {"Hospital's own rate": "payer_rate", "Hospital's median": "median", "Hospital's cash": "cash",
+            "Hospital's cost": "cost", "Medicare rate": "medicare"}
+    for s in summary:
+        k = next((v for p, v in keys.items() if s["benchmark"].startswith(p)), None)
+        c = cov.get(k) if k else None
+        s["coverage_pct"] = c if c is not None else (100 if s["total"] is not None else None)
+        if s["total"] is not None and c is not None and c < 100:
+            # The total leaves out lines with no value: compare it with the billed amount of the same lines.
+            s["pct_of_billed"] = round(100 * s["total"] / (billed * c / 100)) if (billed and c) else None
+            s["benchmark"] += f" (lines = {c} % of billed)"
     lines = LineSerializer(case.lines.filter(basis=basis), many=True).data
     sources, seen = [], set()
     if case.price_file:

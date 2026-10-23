@@ -66,7 +66,7 @@ class ContractTests(APITestCase):
         self.login("jane@smithlee.test")
         r = self.upload()
         self.assertEqual(r.status_code, 201, r.content)
-        self.assertEqual(r.data["status"], "uploaded"); self.assertTrue(r.data["case_number"].startswith("MK-"))
+        self.assertEqual(r.data["status"], "error"); self.assertTrue(r.data["case_number"].startswith("MK-"))
         cid = r.data["id"]
         case = Case.objects.get(pk=cid)
         f = case.files.get(kind="bill")
@@ -80,6 +80,7 @@ class ContractTests(APITestCase):
         self.assertEqual(det["flags"], []); self.assertIsNone(det["hospital_match"]); self.assertIsNone(det["stay"])
         self.assertEqual(set(det["totals"]), {"billed", "payer_rate", "median", "cash", "medicare", "cost"})
         self.assertEqual(self.client.get(f"/api/cases/{cid}/lines/").data, [])
+        self.assertIn("could not be read", det["status_detail"])   # the dummy PDF has no text: pricing stops with a reason
         # another firm: 404, and its list is empty
         self.client.credentials(); self.login("bob@other.test")
         self.assertEqual(self.client.get(f"/api/cases/{cid}/").status_code, 404)

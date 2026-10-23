@@ -86,7 +86,7 @@ class CaseList(APIView):
             bill = storage.save(case, "bill", d["bill"])
             eob = storage.save(case, "eob", d["eob"]) if d.get("eob") else None
         log(request.user, "Bill uploaded", f"{bill.name} · consent recorded" + (f" · EOB {eob.name}" if eob else ""), case)
-        processing.start(case)
+        processing.start(case, user=request.user)
         case.refresh_from_db()
         return Response(CaseSummarySerializer(case).data, status=status.HTTP_201_CREATED)
 
@@ -148,11 +148,21 @@ class DrgConfirm(APIView):
         if stay is None:
             return Response({"detail": "This case has no inpatient stay."}, status=400)
         s = DrgConfirmSerializer(data=request.data); s.is_valid(raise_exception=True)
-        if s.validated_data["ms_drg"] != stay.ms_drg:
-            stay.ms_drg, stay.drg_source = s.validated_data["ms_drg"], "reviewer"
-            # Re-pricing for a changed DRG comes with the pricing patch (pipeline.lien).
+        drg = s.validated_data["ms_drg"]
+        if drg != stay.ms_drg:
+            old = stay.ms_drg
+            processing.reprice(case, ms_drg=drg, user=request.user)   # values for the new DRG
+            log(request.user, "DRG changed", f"MS-DRG {old or '—'} → {drg}", case)
+            case.refresh_from_db()
+            stay = getattr(case, "stay", None)
+            if stay is None:
+                return Response({"detail": case.status_detail or "Re-pricing failed."}, status=400)
+            stay.ms_drg, stay.drg_source = drg, "reviewer"
         stay.drg_confirmed = True
         stay.save()
+        now = timezone.now()
+        case.flags.filter(kind="drg_check", resolved=False).update(resolved=True, resolved_by=request.user, resolved_at=now,
+                                                                     note=f"MS-DRG {stay.ms_drg} confirmed")
         log(request.user, "DRG confirmed", f"MS-DRG {stay.ms_drg}", case)
         return Response(StaySerializer(stay).data)
 
