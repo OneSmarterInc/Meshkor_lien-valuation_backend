@@ -1,4 +1,4 @@
-# Hospital price files: progress (2026-10-23 12:15 UTC)
+# Hospital price files: progress (2026-10-23 12:21 UTC)
 
 **2 of 4 hospitals loaded, 2 remaining.**  (run `python -m pipeline.hpt.hospitals` to get the full Ohio list; this counts only hospital_sites.csv)
 
@@ -15,7 +15,7 @@
 |---|---|
 | raw files `D:\Meshkor_Backend\meshkor-data\data\raw\MRF` | 0.0 GB |
 | Parquet `D:\Meshkor_Backend\meshkor-data\data\ref\ref_hospital_mrf` | 0.04 GB |
-| DuckDB | 1.61 GB |
+| DuckDB | 1.63 GB |
 
 ## Per hospital
 

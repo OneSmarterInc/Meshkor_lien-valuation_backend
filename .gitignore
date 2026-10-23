@@ -92,4 +92,4 @@ sql/views.sql.bak_*
 !tests/fixtures/**/*.pdf
 uploads/
 bills/
-cases/
+/cases/
