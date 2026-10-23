@@ -1,0 +1,17 @@
+# NPPES taxonomy codes that mean "hospital" for the Phase 2 hospital list (guide 2.1).
+# A Type 2 NPI whose primary taxonomy (or any taxonomy, see `any_slot`) is in `acute`
+# and whose CCN starts with the state's hospital prefix is an acute-care hospital.
+acute:
+  - 282N00000X   # General Acute Care Hospital
+  - 282NC0060X   # General Acute Care Hospital, Critical Access
+  - 282NR1301X   # General Acute Care Hospital, Rural
+  - 282NC2000X   # General Acute Care Hospital, Children
+  - 283X00000X   # Rehabilitation Hospital (kept: inpatient rehab bills appear in lien cases)
+  - 282E00000X   # Long Term Care Hospital
+  - 283Q00000X   # Psychiatric Hospital
+  - 284300000X   # Special Hospital
+  - 286500000X   # Military Hospital (excluded by cfg_ccn_npi_reclass as federal)
+any_slot: true   # match any taxonomy slot, not only the primary one
+# CCN prefixes by state: Ohio acute = 36, Ohio specialty = 36xx also; CAH = 361300+
+state: OH
+ccn_prefix: ["36"]

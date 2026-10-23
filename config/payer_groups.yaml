@@ -1,0 +1,23 @@
+# payer_group: a cleaned insurer name for each posted payer_name / plan_name pair.
+# Rules are regular expressions, case-insensitive, tested in order against "payer_name plan_name".
+# First match wins. No match -> "Other". Edit here, never in code (guide rule 0.3.4).
+groups:
+  - {match: "medicare advantage|medicare adv|\\bMA\\b|perennial advantage|medigold|devoted|aetna.*medicare|humana.*medicare|anthem.*medicare|uhc.*medicare|united.*medicare|caresource.*medicare|molina.*medicare|wellcare|summacare.*medicare|mmo.*medicare|medical mutual.*medicare|paramount.*medicare|healthspan.*medicare|upper ohio valley.*medicar", group: "Medicare Advantage"}
+  - {match: "^medicare\\b|medicare ffs|traditional medicare|original medicare", group: "Medicare"}
+  - {match: "medicaid|caresource(?!.*medicare)|molina(?!.*medicare)|buckeye|amerihealth|paramount advantage|humana healthy horizons|aetna better health|ohio ?rise|ODM\\b", group: "Medicaid"}
+  - {match: "anthem|blue cross|bcbs|bluecross|empire|elevance|wellpoint", group: "Anthem"}
+  - {match: "united ?health|\\bunited\\b|uhc|optum|umr|surest|oxford", group: "UnitedHealthcare"}
+  - {match: "aetna|meritain|coventry|first health", group: "Aetna"}
+  - {match: "cigna|evernorth|great ?west", group: "Cigna"}
+  - {match: "medical mutual|\\bMMO\\b|mmo ", group: "Medical Mutual"}
+  - {match: "humana", group: "Humana"}
+  - {match: "summacare", group: "SummaCare"}
+  - {match: "paramount", group: "Paramount"}
+  - {match: "osu health plan|ohio state.*health plan", group: "OSU Health Plan"}
+  - {match: "ohiohealth|ohio health", group: "OhioHealthy"}
+  - {match: "healthspan|cleveland clinic.*plan", group: "Cleveland Clinic Health Plan"}
+  - {match: "tricare|champva|\\bVA\\b|veterans|federal|fehb|gehb", group: "Government other"}
+  - {match: "workers|bwc|work comp|comp\\b", group: "Workers Comp"}
+  - {match: "multiplan|phcs|healthsmart|three rivers|ohio ppo|frontpath|upper ohio valley|first choice|interwest|prime health|lifetrac|optum.*transplant|zelis|beech|galaxy|magnacare|hfn\\b|cofinity|ppo connect", group: "PPO network / TPA"}
+  - {match: "self[- ]?pay|cash|uninsured|discounted", group: "Self-pay"}
+  - {match: "ODRC|corrections|department of health|ohio dept", group: "Government other"}

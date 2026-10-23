@@ -11,6 +11,7 @@ backend/**/local_settings.py
 
 # ---- data: Parquet, DuckDB, work files are rebuilt by load_ref / build_duckdb
 data/**
+# (tests/fixtures/raw is NOT under data/, it is kept whole, every file type)
 # keep the small proof files
 !data/
 !data/ref/
@@ -70,9 +71,13 @@ sql/views.sql.bak_*
 
 # ---- downloaded or large inputs that must stay on the external disk
 *.zip
+!tests/fixtures/**/*.zip
 *.xls
 *.xlsx
 !data_register.xlsx
+!tests/fixtures/**/*.xls
+!tests/fixtures/**/*.xlsx
+!tests/fixtures/**/*.txt
 *.csv
 !config/*.csv
 !tests/fixtures/**/*.csv
@@ -84,6 +89,7 @@ sql/views.sql.bak_*
 
 # ---- never: bills contain PHI
 *.pdf
+!tests/fixtures/**/*.pdf
 uploads/
 bills/
 cases/

@@ -1,0 +1,5 @@
+ccn,hospital_name,system,tier,stage,stage_name,website,file_url,periods_downloaded,periods_registered,periods_loaded,rows_loaded,file_dated,verify,raw_mb,parquet_mb,notes
+360051,Miami Valley Hospital,Premier Health,1,1,website known,https://www.premierhealth.com,,,,,0,,,0.0,0.0,
+360085,Ohio State University Hospitals,OSU Wexner,1,4,loaded,https://wexnermedical.osu.edu,,,,2026-10,2366510,2026-07-01,,0.0,0.0,file downloaded by hand 2026-10-22
+360180,Cleveland Clinic Hospital,Cleveland Clinic,1,1,website known,https://my.clevelandclinic.org,,,,,0,,,0.0,0.0,
+360242,Arthur G James Cancer Hospital,OSU Wexner,1,4,loaded,https://wexnermedical.osu.edu,,,,2026-10,4470209,2026-07-01,,0.0,0.0,file downloaded by hand 2026-10-22

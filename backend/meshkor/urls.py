@@ -1,7 +1,22 @@
-"""Step 1 has no web API (decision Oct 17, 2026). Only the admin site, to
-browse load runs, source files and verify reports."""
+"""URL map. /admin/ for staff browsing; /api/ is the lien portal API the React
+frontend calls (docs/API_CONTRACT.md). Added Oct 23, 2026."""
 from django.contrib import admin
-from django.urls import path
+from django.http import JsonResponse
+from django.urls import include, path
 
-admin.site.site_header = "MeshKor Step 1 — reference data"
-urlpatterns = [path("admin/", admin.site.urls)]
+from refdata.api import DataSourcesView
+
+admin.site.site_header = "MeshKor — lien valuation"
+
+
+def health(_):
+    return JsonResponse({"status": "ok"})
+
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/health/", health),
+    path("api/auth/", include("accounts.urls")),
+    path("api/", include("cases.urls")),
+    path("api/data-sources/", DataSourcesView.as_view()),
+]

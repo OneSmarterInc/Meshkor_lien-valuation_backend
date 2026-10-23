@@ -1,0 +1,90 @@
+{
+  "table": "ref_hospital_mrf",
+  "output": "ref\\ref_hospital_mrf",
+  "rows": 6836719,
+  "columns": [
+    "ccn",
+    "hospital_name",
+    "ein",
+    "type2_npis",
+    "mrf_version",
+    "last_updated_on",
+    "attestation",
+    "description",
+    "code_1",
+    "code_1_type",
+    "code_2",
+    "code_2_type",
+    "code_3",
+    "code_3_type",
+    "code_4",
+    "code_4_type",
+    "modifiers",
+    "billing_class",
+    "drug_unit",
+    "drug_type",
+    "gross_charge",
+    "discounted_cash",
+    "payer_name",
+    "plan_name",
+    "negotiated_dollar",
+    "negotiated_percentage",
+    "negotiated_algorithm",
+    "estimated_amount",
+    "median_amount",
+    "pct_10",
+    "pct_90",
+    "rate_count",
+    "methodology",
+    "charge_min",
+    "charge_max",
+    "payer_notes",
+    "notes",
+    "setting",
+    "hcpcs",
+    "ms_drg",
+    "apr_drg",
+    "rc",
+    "ndc",
+    "cdm",
+    "payer_group",
+    "source_layout",
+    "effective_start",
+    "effective_end",
+    "source_file",
+    "source_sha256",
+    "period"
+  ],
+  "sources": [
+    {
+      "period": "2026-10",
+      "file": "MRF/2026-10/360085",
+      "sha256": "8792ef8b85627de4055d084cad1b37783b7f6e2a7efb32f7dfbde90c219d3b0f",
+      "size_bytes": 519660296,
+      "page": "https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists",
+      "members": [
+        "31-1340739_OHIO-STATE-UNIVERSITY-HOSPITALS_standardcharges.csv"
+      ],
+      "rows": 0
+    },
+    {
+      "period": "2026-10",
+      "file": "MRF/2026-10/360242",
+      "sha256": "0840262d377637320633900d49ac13820b12e2607052ef700620fa49ac995073",
+      "size_bytes": 906492504,
+      "page": "https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists",
+      "members": [
+        "31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.csv"
+      ],
+      "rows": 0
+    }
+  ],
+  "started_at": "2026-10-23T12:16:05+00:00",
+  "finished_at": "2026-10-23T12:16:25+00:00",
+  "seconds": 20.26,
+  "warnings": [
+    "31-1340739_OHIO-STATE-UNIVERSITY-HOSPITALS_standardcharges.csv: 108 lines were not UTF-8; decoded as cp1252 (descriptions only)",
+    "31-1322863_JAMES-CANCER-HOSPITAL_standardcharges.csv: 188 lines were not UTF-8; decoded as cp1252 (descriptions only)"
+  ],
+  "skipped": []
+}

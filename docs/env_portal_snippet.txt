@@ -1,0 +1,23 @@
+# ---- add to .env (lien portal API, Oct 23, 2026) ----
+DJANGO_SECRET_KEY=<at least 50 random characters; signs the JWTs>
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+# bills/EOBs are encrypted with this key; make it once, back it up, never commit it:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+MESHKOR_FILE_KEY=
+# where the encrypted bills live (outside the repo). Default: <MESHKOR_DATA_ROOT>\uploads
+MESHKOR_UPLOAD_DIR=D:\Meshkor_Backend\uploads
+# frontend origins (production only; the Vite dev proxy needs none)
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+MESHKOR_PORTAL_URL=http://localhost:5173
+# token lifetimes
+JWT_ACCESS_MINUTES=30
+JWT_REFRESH_HOURS=12
+# a different reviewer must approve a case whose flags you resolved (1 = on)
+MESHKOR_FOUR_EYES=0
+# "report ready" mail. Console backend prints to the terminal; for real mail set the SMTP values.
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+# EMAIL_HOST=smtp.office365.com
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=
+# EMAIL_HOST_PASSWORD=
+# DEFAULT_FROM_EMAIL=reports@meshkor.com

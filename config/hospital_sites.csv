@@ -1,0 +1,15 @@
+ccn,hospital_name,system,website,hpt_txt_url,source_page_url,verified,history,notes
+360085,Ohio State University Hospitals,OSU Wexner,https://wexnermedical.osu.edu,,https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists,yes,,file downloaded by hand 2026-10-22
+360242,Arthur G James Cancer Hospital,OSU Wexner,https://wexnermedical.osu.edu,,https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists,yes,,file downloaded by hand 2026-10-22
+360051,Miami Valley Hospital,Premier Health,https://www.premierhealth.com,,,no,,
+360180,Cleveland Clinic Hospital,Cleveland Clinic,https://my.clevelandclinic.org,,,no,,
+,,Kettering Health,https://ketteringhealth.org,,,no,,fill ccn from hpt_hospitals output
+,,OhioHealth,https://www.ohiohealth.com,,,no,,
+,,Mount Carmel,https://www.mountcarmelhealth.com,,,no,,
+,,Mercy Health,https://www.mercy.com,,,no,,
+,,TriHealth,https://www.trihealth.com,,,no,,
+,,UC Health,https://www.uchealth.com,,,no,,
+,,ProMedica,https://www.promedica.org,,,no,,
+,,Summa Health,https://www.summahealth.org,,,no,,
+,,MetroHealth,https://www.metrohealth.org,,,no,,
+,,University Hospitals,https://www.uhhospitals.org,,,no,,

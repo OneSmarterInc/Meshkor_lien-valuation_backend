@@ -6,3 +6,9 @@ openpyxl>=3.1
 django>=5.1
 psycopg[binary]>=3.2
 pytest>=8
+# ---- lien portal API (Oct 23, 2026)
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.4
+cryptography>=43
+reportlab>=4.2

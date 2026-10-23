@@ -1,0 +1,248 @@
+# MeshKor Lien Valuation: API contract (frontend ⇄ backend)
+
+Version 1 · 2026-10-23. The React frontend calls exactly these endpoints. Build the backend to match, or change `src/api/endpoints.js` in one place if a path differs.
+
+## General rules
+
+| Rule | Value |
+|---|---|
+| Base URL | `VITE_API_BASE_URL` (e.g. `https://api.meshkor.com`). In development, Vite proxies `/api` to `http://localhost:8000`. |
+| Format | JSON, `snake_case` keys (Django REST Framework default). Dates `YYYY-MM-DD`, timestamps ISO 8601 with time zone. Money = number in US dollars (not a string). |
+| Auth | `Authorization: Bearer <access>` on every call except login and refresh (SimpleJWT style). |
+| Token expiry | On `401`, the frontend calls refresh once, then repeats the request. If refresh fails, it logs out. |
+| Errors | Status code + JSON `{"detail": "message"}` or DRF field errors `{"field": ["message"]}`. The frontend shows `detail`, or the first field message. |
+| Lists | Paginated like DRF: `{"count": 42, "next": url|null, "previous": url|null, "results": [...]}`. Query `?page=2`. |
+| Access | **A firm user sees only its own firm's cases.** The backend enforces this; the frontend only hides menus. Staff (reviewer, admin) see all firms. |
+| CORS | Allow the frontend origin, header `Authorization`, and expose `Content-Disposition` (for download file names). |
+
+## Roles
+
+| `role` | Who | Screens |
+|---|---|---|
+| `firm` | Law firm user | Upload a bill, My reports |
+| `reviewer` | MeshKor reviewer | Cases, Upload, Review, Report & send, Data sources, Audit log |
+| `admin` | MeshKor admin | Same as reviewer |
+
+## 1. Auth
+
+### `POST /api/auth/login/`
+Request `{"email": "a@firm.com", "password": "…"}`
+Response `200`:
+```json
+{
+  "access": "<jwt>",
+  "refresh": "<jwt>",
+  "user": {"id": 7, "name": "Jane Doe", "email": "a@firm.com", "role": "firm",
+           "firm": {"id": 3, "name": "Smith & Lee LLP"}}
+}
+```
+`firm` is `null` for staff. Wrong password → `401 {"detail": "Wrong email or password."}`.
+
+### `POST /api/auth/refresh/`
+Request `{"refresh": "<jwt>"}` → `200 {"access": "<jwt>"}` (a new `refresh` may also be returned).
+
+### `GET /api/auth/me/`
+→ `200` the `user` object above.
+
+### `POST /api/auth/logout/`
+Request `{"refresh": "<jwt>"}` → `204`. (Blacklist the refresh token.)
+
+## 2. Cases
+
+### Case statuses (`status`)
+
+| Value | Meaning | Shown to firm as |
+|---|---|---|
+| `uploaded` | Files received | In progress |
+| `processing` | Being read, matched and priced | In progress |
+| `needs_review` | Ready for a reviewer | In progress |
+| `returned` | Reviewer sent it back for another pass | In progress |
+| `no_price_file` | No hospital price file found for the date of service | In progress |
+| `error` | Processing failed (see `status_detail`) | In progress |
+| `sent` | Approved and released to the firm | Ready |
+
+### Case summary object
+```json
+{
+  "id": 101,
+  "case_number": "MK-2026-0101",
+  "firm": {"id": 3, "name": "Smith & Lee LLP"},
+  "matter_ref": "SL-2026-0142",
+  "visit_summary": "ER visit, head and neck CT",
+  "hospital_name": "Ohio State University Hospitals",
+  "ccn": "360085",
+  "setting": "outpatient",
+  "service_date_from": "2026-08-14",
+  "service_date_to": "2026-08-14",
+  "payer_name": "Anthem",
+  "billed_total": 9647.87,
+  "status": "needs_review",
+  "status_detail": null,
+  "created_at": "2026-10-23T09:20:11+05:30",
+  "sent_at": null
+}
+```
+`setting` is `outpatient` or `inpatient`. `visit_summary`, `hospital_name`, `ccn`, `payer_name`, `billed_total` may be `null` until processing has run.
+
+### `GET /api/cases/`
+Query: `status` (one value or comma list), `search` (case number, matter ref, hospital, payer), `firm` (staff only), `page`.
+→ paginated case summaries, newest first.
+
+### `GET /api/cases/stats/` (staff)
+```json
+{"needs_review": 3, "processing": 2, "sent_this_month": 2, "billed_open_total": 86342.15}
+```
+
+### `POST /api/cases/` (multipart/form-data)
+Fields: `matter_ref` (text), `report_for` (`plaintiff` | `defense` | `lien_resolution`), `consent` (`true`, required), `bill` (file, required, PDF/JPG/PNG/TIFF ≤ 50 MB), `eob` (file, optional).
+Staff may also send `firm_id`. → `201` case summary (status `uploaded`).
+
+### `GET /api/cases/{id}/` (case detail)
+Case summary plus:
+```json
+{
+  "report_for": "plaintiff",
+  "bill_type": "UB-04",
+  "files": [
+    {"kind": "bill", "name": "bill.pdf", "size_bytes": 36211, "sha256": "7c41e0…", "uploaded_at": "…"},
+    {"kind": "eob",  "name": "eob.pdf",  "size_bytes": 20110, "sha256": "…",      "uploaded_at": "…"}
+  ],
+  "hospital_match": {
+    "npi": "1234567890",
+    "ccn": "360085",
+    "hospital_name": "Ohio State University Hospitals",
+    "price_file": {
+      "file_name": "31-1340739_OHIO-STATE-UNIVERSITY-HOSPITALS_standardcharges.csv",
+      "period": "2026-10",
+      "last_updated_on": "2026-07-01",
+      "covers_service_date": true
+    }
+  },
+  "totals": {"billed": 9647.87, "payer_rate": 3114.60, "median": 2964.90,
+             "cash": null, "medicare": 1400.43, "cost": 2026.05},
+  "flags": [
+    {"id": 55, "kind": "low_confidence", "severity": "check", "line_no": 5,
+     "title": "Line 5 · 36415 read with 71 % certainty",
+     "detail": "Check the code and charge against the bill image.", "resolved": false},
+    {"id": 56, "kind": "packaged", "severity": "info", "line_no": null,
+     "title": "4 lines have no separate Medicare payment",
+     "detail": "Lines 5, 9, 10, 11 are packaged into other payments.", "resolved": false}
+  ],
+  "stay": null
+}
+```
+`hospital_match` is `null` when no match was found. `totals.cash` is `null` when the hospital posts no cash price.
+
+Flag `kind` values: `low_confidence`, `no_rate`, `no_price_file`, `estimate`, `packaged`, `no_eob`, `drg_check`, `other`. `severity`: `check` (reviewer must act) or `info`.
+
+For an inpatient case, `stay` is:
+```json
+{
+  "ms_drg": "481",
+  "drg_title": "Hip and femur procedures except major joint with CC",
+  "drg_source": "bill",
+  "drg_confirmed": false,
+  "los_days": 3,
+  "diagnoses": [{"code": "S72.301A", "description": "Fracture of shaft of right femur", "level": "principal"},
+                {"code": "D62", "description": "Acute posthemorrhagic anemia", "level": "cc"}],
+  "values": {"billed": 58612.00, "payer_rate": 38520.00, "median": 36900.00,
+             "medicare": 21740.00, "cost": 12308.52}
+}
+```
+`drg_source`: `bill` or `grouper`. `level`: `principal`, `mcc`, `cc`, `other`.
+
+### `GET /api/cases/{id}/lines/?basis=service_date|estimate`
+`service_date` (default) = rates in force on the date of service. `estimate` = hospital's current payer ÷ Medicare ratio × Medicare on the date of service.
+→ array (not paginated):
+```json
+[{
+  "line_no": 1, "service_date": "2026-08-14", "revenue_code": "0450", "hcpcs": "99285",
+  "modifiers": "", "units": 1, "description": "HC EMERGENCY ROOM LEVEL 5",
+  "charge": 3403.00, "confidence": 0.98,
+  "payer_rate": 1452.00, "payer_rate_is_estimate": false,
+  "median": 1388.00, "p10": 1120.00, "p90": 1690.00, "cash": null,
+  "medicare": 598.40, "medicare_status": "priced", "medicare_source": "OPPS 2026Q3, wage-adjusted",
+  "cost": 714.63,
+  "status": "priced",
+  "sources": [{"label": "Hospital price file", "file_name": "31-1340739_…csv", "sha256": "…"}]
+}]
+```
+`medicare_status`: `priced`, `packaged`, `none`. Line `status`: `priced`, `packaged`, `unpriced_no_code`, `unpriced_no_hospital_row`. Any benchmark may be `null`.
+
+### `POST /api/cases/{id}/flags/{flag_id}/resolve/` (staff)
+Request `{"note": "optional"}` → `200` the flag with `"resolved": true`.
+
+### `POST /api/cases/{id}/drg/confirm/` (staff)
+Request `{"ms_drg": "481"}` → `200` the `stay` object with `"drg_confirmed": true`.
+
+## 3. Report and release
+
+### `GET /api/cases/{id}/report/`
+The report as data, for the on-screen preview (the PDF is built from the same data):
+```json
+{
+  "title": "Reasonable value of hospital charges",
+  "generated_at": "2026-10-23T09:41:00+05:30",
+  "summary": [
+    {"benchmark": "Billed charges",                    "total": 9647.87, "pct_of_billed": 100},
+    {"benchmark": "Hospital's own rate with Anthem",   "total": 3114.60, "pct_of_billed": 32},
+    {"benchmark": "Hospital's median negotiated rate", "total": 2964.90, "pct_of_billed": 31},
+    {"benchmark": "Hospital's cost (cost report)",     "total": 2026.05, "pct_of_billed": 21},
+    {"benchmark": "Medicare rate for this hospital",   "total": 1400.43, "pct_of_billed": 15}
+  ],
+  "summary_text": "The hospital billed $9,647.87. …",
+  "lines": [ /* same objects as GET /lines/ */ ],
+  "sources": [{"data": "Hospital price file", "file_name": "…", "dated": "2026-07-01", "sha256": "…"}],
+  "method": "Each billed line is matched …",
+  "limits": "Percentile amounts exist only for …",
+  "reviewer": {"name": "…", "approved_at": null}
+}
+```
+
+### Downloads (file responses, auth required)
+| Endpoint | Content-Type | File name (Content-Disposition) |
+|---|---|---|
+| `GET /api/cases/{id}/report.pdf` | `application/pdf` | `MK-2026-0101_valuation_report.pdf` |
+| `GET /api/cases/{id}/report.csv` | `text/csv` | `MK-2026-0101_data_appendix.csv` |
+
+Firm users may download only when the case `status` is `sent`. Staff may download any time (draft watermark is up to the backend).
+
+### `POST /api/cases/{id}/approve/` (staff)
+Request `{"note": "optional"}` → `200` case summary with `status: "sent"`. The backend emails the firm, writes the audit log, and blocks approval by the same user who resolved the flags only if that rule is turned on.
+
+### `POST /api/cases/{id}/return/` (staff)
+Request `{"note": "required reason"}` → `200` case summary with `status: "returned"`.
+
+### `POST /api/cases/{id}/feedback/` (firm, after `sent`)
+Request `{"outcome": "reduced" | "partly" | "no_change", "price_per_report": 250, "pricing_model": "per_report" | "subscription", "comment": "…"}` → `201`.
+
+## 4. Firms (staff)
+
+### `GET /api/firms/`
+→ `[{"id": 3, "name": "Smith & Lee LLP"}]` (a plain list or a paginated list; both work). Used for the firm picker when staff upload a bill.
+
+## 5. Data sources (staff)
+
+### `GET /api/data-sources/`
+```json
+{
+  "verify": {"pass": 245, "fail": 0, "run_at": "2026-10-22T23:39:00+05:30"},
+  "reference": [{"name": "Medicare outpatient (OPPS)", "rows": 224012, "covers": "2024Q1–2026Q4", "status": "ok"}],
+  "price_files": [{"ccn": "360085", "hospital_name": "Ohio State University Hospitals",
+                   "last_updated_on": "2026-07-01", "rows": 2366510, "status": "loaded"}]
+}
+```
+Reference `status`: `ok`, `partial`, `missing`. Price file `status`: `loaded`, `downloading`, `not_found`, `error`.
+
+## 6. Audit log (staff)
+
+### `GET /api/audit/?case={id}&page=`
+→ paginated `{"at": "…", "actor": "Jane Doe (Smith & Lee LLP)", "action": "Bill uploaded", "detail": "bill.pdf · consent recorded", "case_number": "MK-2026-0101"}`, newest first.
+
+## 7. Checklist for the backend
+
+1. All endpoints above, with the same paths, keys and enums.
+2. Firm isolation on every case endpoint (`404` for another firm's case).
+3. CORS + `Content-Disposition` exposed.
+4. Bills and EOBs stored encrypted, outside the repo; every view and download written to the audit log.
+5. `401` on an expired token (not `403`), so the frontend refreshes.

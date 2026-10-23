@@ -1,0 +1,172 @@
+{
+ "hospital_name": "Test JSON Hospital",
+ "last_updated_on": "2026-02-01",
+ "version": "3.0.0",
+ "hospital_location": [
+  "Test JSON Hospital"
+ ],
+ "hospital_address": [
+  "2 Main St, Columbus, OH 43210"
+ ],
+ "license_information": {
+  "license_number": "8888",
+  "state": "OH"
+ },
+ "affirmation": {
+  "affirmation": "To the best of its knowledge and belief ...",
+  "confirm_affirmation": true
+ },
+ "standard_charge_information": [
+  {
+   "description": "OFFICE VISIT EST LVL 3",
+   "code_information": [
+    {
+     "code": "99213",
+     "type": "CPT"
+    },
+    {
+     "code": "510",
+     "type": "RC"
+    }
+   ],
+   "standard_charges": [
+    {
+     "setting": "outpatient",
+     "gross_charge": 238.0,
+     "discounted_cash": 142.8,
+     "minimum": 71.4,
+     "maximum": 166.6,
+     "payers_information": [
+      {
+       "payer_name": "Anthem",
+       "plan_name": "Anthem - PPO",
+       "standard_charge_dollar": 119.0,
+       "methodology": "fee schedule"
+      },
+      {
+       "payer_name": "Medicare",
+       "plan_name": "Medicare FFS",
+       "standard_charge_algorithm": "CMS fee schedule",
+       "estimated_amount": 71.4,
+       "methodology": "other"
+      },
+      {
+       "payer_name": "Cigna",
+       "plan_name": "Cigna OAP",
+       "standard_charge_percentage": 45,
+       "estimated_amount": 107.1,
+       "median_amount": 104.72,
+       "10th_percentile": 95.2,
+       "90th_percentile": 119.0,
+       "count": 12,
+       "methodology": "percent of total billed charges"
+      }
+     ],
+     "additional_generic_notes": "synthetic"
+    }
+   ]
+  },
+  {
+   "description": "KNEE REPLACEMENT",
+   "code_information": [
+    {
+     "code": "470",
+     "type": "MS-DRG"
+    }
+   ],
+   "standard_charges": [
+    {
+     "setting": "inpatient",
+     "gross_charge": 90000.0,
+     "discounted_cash": 54000.0,
+     "minimum": 27000.0,
+     "maximum": 63000.0,
+     "payers_information": [
+      {
+       "payer_name": "Anthem",
+       "plan_name": "Anthem - PPO",
+       "standard_charge_dollar": 45000.0,
+       "methodology": "fee schedule"
+      },
+      {
+       "payer_name": "Medicare",
+       "plan_name": "Medicare FFS",
+       "standard_charge_algorithm": "CMS fee schedule",
+       "estimated_amount": 27000.0,
+       "methodology": "other"
+      },
+      {
+       "payer_name": "Cigna",
+       "plan_name": "Cigna OAP",
+       "standard_charge_percentage": 45,
+       "estimated_amount": 40500.0,
+       "median_amount": 39600.0,
+       "10th_percentile": 36000.0,
+       "90th_percentile": 45000.0,
+       "count": 12,
+       "methodology": "percent of total billed charges"
+      }
+     ],
+     "additional_generic_notes": "synthetic"
+    }
+   ]
+  },
+  {
+   "description": "NIVOLUMAB 1 MG",
+   "code_information": [
+    {
+     "code": "J9299",
+     "type": "HCPCS"
+    },
+    {
+     "code": "636",
+     "type": "RC"
+    },
+    {
+     "code": "00003377212",
+     "type": "NDC"
+    }
+   ],
+   "standard_charges": [
+    {
+     "setting": "both",
+     "gross_charge": 157.38,
+     "discounted_cash": 94.43,
+     "minimum": 47.21,
+     "maximum": 110.17,
+     "payers_information": [
+      {
+       "payer_name": "Anthem",
+       "plan_name": "Anthem - PPO",
+       "standard_charge_dollar": 78.69,
+       "methodology": "fee schedule"
+      },
+      {
+       "payer_name": "Medicare",
+       "plan_name": "Medicare FFS",
+       "standard_charge_algorithm": "CMS fee schedule",
+       "estimated_amount": 47.21,
+       "methodology": "other"
+      },
+      {
+       "payer_name": "Cigna",
+       "plan_name": "Cigna OAP",
+       "standard_charge_percentage": 45,
+       "estimated_amount": 70.82,
+       "median_amount": 69.25,
+       "10th_percentile": 62.95,
+       "90th_percentile": 78.69,
+       "count": 12,
+       "methodology": "percent of total billed charges"
+      }
+     ],
+     "additional_generic_notes": "synthetic"
+    }
+   ],
+   "drug_information": {
+    "unit": "1",
+    "type": "ME"
+   }
+  }
+ ]
+}

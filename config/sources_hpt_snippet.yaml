@@ -1,0 +1,22 @@
+# Add to config/sources_local.yaml (build PC) — one release per hospital x download period.
+# effective_start = the file's last_updated_on (OSU and James files are dated 7/1/2026).
+# When a newer file for the same CCN is loaded, set this release's effective_end to the day before.
+ref_hospital_mrf:                 # Step 2 — hospital price transparency files
+  loader: hospital_mrf
+  releases:
+  - period: "2026-10"
+    ccn: "360085"
+    effective_start: 2026-07-01
+    effective_end: 9999-12-31
+    page: https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists
+    file: MRF/2026-10/360085
+    members:
+      mrf: "*standardcharges*.csv"
+  - period: "2026-10"
+    ccn: "360242"
+    effective_start: 2026-07-01
+    effective_end: 9999-12-31
+    page: https://wexnermedical.osu.edu/patient-and-visitor-guide/patient-pricing-lists
+    file: MRF/2026-10/360242
+    members:
+      mrf: "*standardcharges*.csv"

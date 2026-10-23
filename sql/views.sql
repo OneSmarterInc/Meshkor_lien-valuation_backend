@@ -248,124 +248,93 @@ FROM ref_hcpcs_code
 WHERE hcpcs = upper(p_hcpcs) AND record_type = 'code'
   AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
 
+-- ===== Step 2: hospital price files, MS-DRG definitions, 340B (added 2026-10-23) =====
+-- build_duckdb makes the tables ref_hospital_mrf, ref_msdrg*, ref_340b_* from their Parquet
+-- folders. Only macros and views here, one per "-- @stmt" block, like the Step 1 ones above.
 
--- ===== Step 2 and later (added 2026-10-22) =====
-
--- views_mrf.sql: hospital price files (Step 2) in DuckDB.
--- Run after load_mrf.py:   python peek.py  or  duckdb data\meshkor.duckdb < views_mrf.sql
--- Or paste the CREATE statements into sql\views.sql so build_duckdb makes them every time.
-
--- One view over every loaded hospital / period (Hive folders ccn=â€¦ / period=â€¦).
--- @stmt ref_hospital_mrf: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_hospital_mrf AS
-SELECT * FROM read_parquet('data/ref/ref_hospital_mrf/*/*/*.parquet', hive_partitioning = true, hive_types = {'ccn': VARCHAR, 'period': VARCHAR}, union_by_name = true);
-
--- Negotiated rate for a HCPCS code at a hospital on a date of service, one row per payer/plan.
--- @stmt mrf_rate: added from the Step 2 view files
-CREATE OR REPLACE MACRO mrf_rate(p_ccn, p_code, dos) AS TABLE
-SELECT ccn, hospital_name, period, hcpcs, rc, setting, payer_name, plan_name,
+-- @stmt mrf_rate: a hospital's posted rates for a HCPCS/CPT code on a date of service, one row per payer/plan
+CREATE OR REPLACE MACRO mrf_rate(p_ccn, p_code, p_dos) AS TABLE
+SELECT ccn, hospital_name, period, hcpcs, rc, setting, payer_group, payer_name, plan_name,
        gross_charge, discounted_cash, negotiated_dollar, negotiated_percentage, negotiated_algorithm,
-       estimated_amount, median_amount, pct_10, pct_90, methodology, charge_min, charge_max,
-       source_file, source_sha256
+       estimated_amount, median_amount, pct_10, pct_90, rate_count, methodology, charge_min, charge_max,
+       last_updated_on, source_file, source_sha256
 FROM ref_hospital_mrf
-WHERE ccn = p_ccn AND hcpcs = p_code AND dos BETWEEN effective_start AND effective_end;
+WHERE ccn = p_ccn AND hcpcs = p_code AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
 
--- Inpatient stay by MS-DRG at a hospital on a date of service.
--- @stmt mrf_drg: added from the Step 2 view files
-CREATE OR REPLACE MACRO mrf_drg(p_ccn, p_drg, dos) AS TABLE
-SELECT ccn, hospital_name, period, ms_drg, description, payer_name, plan_name,
+-- @stmt mrf_rc_rate: the same for a revenue-code-only bill line (no HCPCS on the line)
+CREATE OR REPLACE MACRO mrf_rc_rate(p_ccn, p_rc, p_dos) AS TABLE
+SELECT ccn, hospital_name, period, rc, cdm, description, setting, payer_group, payer_name, plan_name,
        gross_charge, discounted_cash, negotiated_dollar, negotiated_percentage, negotiated_algorithm,
        estimated_amount, methodology, charge_min, charge_max, source_file, source_sha256
 FROM ref_hospital_mrf
-WHERE ccn = p_ccn AND ms_drg = p_drg AND dos BETWEEN effective_start AND effective_end;
+WHERE ccn = p_ccn AND rc = p_rc AND hcpcs IS NULL AND ms_drg IS NULL
+  AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
 
--- Drug rows (J-codes and NDC) for the drug markup audit.
--- @stmt v_mrf_drugs: added from the Step 2 view files
+-- @stmt mrf_drg: a hospital's posted rates for an inpatient MS-DRG on a date of service
+CREATE OR REPLACE MACRO mrf_drg(p_ccn, p_drg, p_dos) AS TABLE
+SELECT ccn, hospital_name, period, ms_drg, description, payer_group, payer_name, plan_name,
+       gross_charge, discounted_cash, negotiated_dollar, negotiated_percentage, negotiated_algorithm,
+       estimated_amount, methodology, charge_min, charge_max, source_file, source_sha256
+FROM ref_hospital_mrf
+WHERE ccn = p_ccn AND ms_drg = p_drg AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
+
+-- @stmt mrf_rate_summary: one row per payer group for a code: min, median, max of the dollar rates, plus cash and gross
+CREATE OR REPLACE MACRO mrf_rate_summary(p_ccn, p_code, p_dos) AS TABLE
+SELECT ccn, hcpcs, payer_group, count(*) AS plans,
+       min(negotiated_dollar) AS min_rate, median(negotiated_dollar) AS median_rate, max(negotiated_dollar) AS max_rate,
+       sum(CASE WHEN negotiated_dollar IS NULL AND negotiated_percentage IS NOT NULL THEN 1 ELSE 0 END) AS pct_only_plans,
+       max(discounted_cash) AS discounted_cash, max(gross_charge) AS gross_charge,
+       any_value(source_file) AS source_file, any_value(source_sha256) AS source_sha256
+FROM ref_hospital_mrf
+WHERE ccn = p_ccn AND hcpcs = p_code AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end
+GROUP BY ccn, hcpcs, payer_group ORDER BY median_rate NULLS LAST;
+
+-- @stmt v_mrf_drugs: drug rows (J/Q codes or an NDC) for the drug markup audit
 CREATE OR REPLACE VIEW v_mrf_drugs AS
 SELECT ccn, hospital_name, period, hcpcs, ndc, description, drug_unit, drug_type, setting,
-       payer_name, plan_name, gross_charge, discounted_cash, negotiated_dollar, negotiated_percentage,
-       negotiated_algorithm, estimated_amount, median_amount, pct_10, pct_90, methodology,
-       effective_start, effective_end, source_file, source_sha256
+       payer_group, payer_name, plan_name, gross_charge, discounted_cash, negotiated_dollar,
+       negotiated_percentage, negotiated_algorithm, estimated_amount, median_amount, pct_10, pct_90,
+       methodology, effective_start, effective_end, source_file, source_sha256
 FROM ref_hospital_mrf
 WHERE ndc IS NOT NULL OR hcpcs LIKE 'J%' OR hcpcs LIKE 'Q%';
 
--- Example queries
--- SELECT * FROM mrf_rate('360085', '27447', DATE '2026-09-01') ORDER BY negotiated_dollar;
--- SELECT * FROM mrf_drg('360085', '470', DATE '2026-09-01');
--- SELECT hcpcs, payer_name, negotiated_dollar FROM v_mrf_drugs WHERE ccn='360085' AND hcpcs='J9299' ORDER BY 3;
--- SELECT ccn, period, count(*) FROM ref_hospital_mrf GROUP BY ALL;
--- views_340b.sql: HRSA 340B covered entities in DuckDB. Paste into sql\views.sql, or run once by hand.
+-- @stmt v_mrf_coverage: which hospitals and periods are loaded, with row counts and file dates
+CREATE OR REPLACE VIEW v_mrf_coverage AS
+SELECT ccn, any_value(hospital_name) AS hospital_name, period, any_value(last_updated_on) AS file_dated,
+       min(effective_start) AS effective_start, max(effective_end) AS effective_end,
+       count(*) AS rows_, count(DISTINCT payer_name) AS payers, any_value(source_layout) AS layout,
+       any_value(source_sha256) AS source_sha256
+FROM ref_hospital_mrf GROUP BY ccn, period ORDER BY ccn, period;
 
--- @stmt ref_340b_entity: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_340b_entity AS
-SELECT * FROM read_parquet('data/ref/ref_340b_entity/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
+-- @stmt msdrg_title: title, MDC and type of a DRG on a date of service (grouper version in force that day)
+CREATE OR REPLACE MACRO msdrg_title(p_drg, p_dos) AS TABLE
+SELECT ms_drg, mdc, drg_type, title, period AS grouper_version, fiscal_year
+FROM ref_msdrg WHERE ms_drg = p_drg AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
 
--- @stmt ref_340b_shipping: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_340b_shipping AS
-SELECT * FROM read_parquet('data/ref/ref_340b_shipping/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
+-- @stmt msdrg_for_dx: DRGs a principal diagnosis can lead to on a date of service (appendix B index)
+CREATE OR REPLACE MACRO msdrg_for_dx(p_icd10, p_dos) AS TABLE
+SELECT d.icd10, d.mdc, d.drg_from, d.drg_to, r.ms_drg, r.title, d.period AS grouper_version
+FROM ref_msdrg_dx d
+JOIN ref_msdrg r ON r.period = d.period AND r.ms_drg BETWEEN d.drg_from AND d.drg_to
+WHERE d.icd10 = p_icd10 AND CAST(p_dos AS DATE) BETWEEN d.effective_start AND d.effective_end
+ORDER BY r.ms_drg;
 
--- @stmt ref_340b_contract_pharmacy: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_340b_contract_pharmacy AS
-SELECT * FROM read_parquet('data/ref/ref_340b_contract_pharmacy/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
+-- @stmt msdrg_cc_level: is a secondary diagnosis a CC or MCC on a date of service
+CREATE OR REPLACE MACRO msdrg_cc_level(p_icd10, p_dos) AS TABLE
+SELECT icd10, cc_level, cc_only_if_alive, hac, pdx_exclusion_group, description, period AS grouper_version
+FROM ref_msdrg_cc WHERE icd10 = p_icd10 AND CAST(p_dos AS DATE) BETWEEN effective_start AND effective_end;
 
--- Is this hospital (CCN) a 340B covered entity on a date? One row per 340B registration.
--- @stmt hospital_340b: added from the Step 2 view files
-CREATE OR REPLACE MACRO hospital_340b(p_ccn, dos) AS TABLE
+-- @stmt hospital_340b: 340B registrations of a hospital (CCN) active on a date
+CREATE OR REPLACE MACRO hospital_340b(p_ccn, p_dos) AS TABLE
 SELECT id_340b, entity_type, entity_name, entity_sub_division_name, participating,
        participating_start_date, termination_date, street_city, street_state, period
 FROM ref_340b_entity
-WHERE ccn = p_ccn
-  AND participating_start_date <= dos
-  AND (termination_date IS NULL OR termination_date > dos);
+WHERE ccn = p_ccn AND participating_start_date <= CAST(p_dos AS DATE)
+  AND (termination_date IS NULL OR termination_date > CAST(p_dos AS DATE));
 
--- Ohio hospitals in 340B (parent registrations only: TYPE+CCN, or TYPE+CCN-00; child sites have letter or -NN suffixes)
--- @stmt v_340b_ohio_hospitals: added from the Step 2 view files
+-- @stmt v_340b_ohio_hospitals: Ohio hospitals in 340B (parent registrations only)
 CREATE OR REPLACE VIEW v_340b_ohio_hospitals AS
 SELECT ccn, entity_type, entity_name, street_city, participating, participating_start_date, termination_date, period
 FROM ref_340b_entity
 WHERE street_state = 'OH' AND ccn IS NOT NULL AND regexp_matches(id_340b, '^[A-Z]{2,5}[0-9]{6}(-00)?$')
   AND entity_type IN ('DSH','CAN','CAH','RRC','SCH','PED','CH');
-
--- Examples
--- SELECT * FROM hospital_340b('360242', DATE '2026-09-01');
--- SELECT entity_type, count(*) FROM v_340b_ohio_hospitals WHERE participating GROUP BY 1;
--- views_msdrg.sql: MS-DRG definitions in DuckDB. Paste into sql\views.sql, or run once by hand.
-
--- @stmt ref_msdrg: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_msdrg AS
-SELECT * FROM read_parquet('data/ref/ref_msdrg/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
--- @stmt ref_msdrg_dx: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_msdrg_dx AS
-SELECT * FROM read_parquet('data/ref/ref_msdrg_dx/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
--- @stmt ref_msdrg_cc: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_msdrg_cc AS
-SELECT * FROM read_parquet('data/ref/ref_msdrg_cc/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
--- @stmt ref_msdrg_cc_excl: added from the Step 2 view files
-CREATE OR REPLACE VIEW ref_msdrg_cc_excl AS
-SELECT * FROM read_parquet('data/ref/ref_msdrg_cc_excl/*/*.parquet', hive_partitioning = true, hive_types = {'period': VARCHAR}, union_by_name = true);
-
--- Title, MDC and type of a DRG on a date of service (the grouper version in force that day).
--- @stmt msdrg_title: added from the Step 2 view files
-CREATE OR REPLACE MACRO msdrg_title(p_drg, dos) AS TABLE
-SELECT ms_drg, mdc, drg_type, title, period AS grouper_version, fiscal_year
-FROM ref_msdrg WHERE ms_drg = p_drg AND dos BETWEEN effective_start AND effective_end;
-
--- Which DRGs a principal diagnosis can lead to on a date of service (from the appendix B index).
--- @stmt msdrg_for_dx: added from the Step 2 view files
-CREATE OR REPLACE MACRO msdrg_for_dx(p_icd10, dos) AS TABLE
-SELECT d.icd10, d.mdc, d.drg_from, d.drg_to, r.ms_drg, r.title, d.period AS grouper_version
-FROM ref_msdrg_dx d
-JOIN ref_msdrg r ON r.period = d.period AND r.ms_drg BETWEEN d.drg_from AND d.drg_to
-WHERE d.icd10 = p_icd10 AND dos BETWEEN d.effective_start AND d.effective_end
-ORDER BY r.ms_drg;
-
--- Is a secondary diagnosis a CC or MCC on a date of service?
--- @stmt msdrg_cc_level: added from the Step 2 view files
-CREATE OR REPLACE MACRO msdrg_cc_level(p_icd10, dos) AS TABLE
-SELECT icd10, cc_level, cc_only_if_alive, hac, pdx_exclusion_group, description, period AS grouper_version
-FROM ref_msdrg_cc WHERE icd10 = p_icd10 AND dos BETWEEN effective_start AND effective_end;
-
--- Examples
--- SELECT * FROM msdrg_title('470', DATE '2026-05-01');
--- SELECT * FROM msdrg_for_dx('S72001A', DATE '2026-05-01');   -- hip fracture -> DRGs
--- SELECT * FROM msdrg_cc_level('I5023', DATE '2026-05-01');

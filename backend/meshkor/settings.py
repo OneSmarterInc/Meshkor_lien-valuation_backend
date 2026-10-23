@@ -1,8 +1,9 @@
 """Django settings for the MeshKor Step 1 backend.
 
 Decisions (Oct 17, 2026): PostgreSQL holds Django's own records (load runs,
-source files, verify runs); the reference data lives in Parquet + DuckDB
-tables; no web API in Step 1 (admin site only).
+source files, verify runs, portal users, cases); the reference data lives in
+Parquet + DuckDB tables. Oct 23, 2026: the lien portal API (DRF + JWT) was
+added for the React frontend; see docs/API_CONTRACT.md.
 
 All settings come from environment variables (see ../.env.example).
 """
@@ -39,11 +40,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
     "refdata",
+    "accounts",
+    "cases",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -95,6 +102,60 @@ else:
 # Reference data (Parquet, DuckDB, raw downloads). Default: <repo>/data
 MESHKOR_DATA_ROOT = os.environ.get("MESHKOR_DATA_ROOT", str(PROJECT_ROOT / "data"))
 os.environ.setdefault("MESHKOR_DATA_ROOT", MESHKOR_DATA_ROOT)
+
+# ---- Lien portal API (Oct 23, 2026) -------------------------------------------
+from datetime import timedelta  # noqa: E402
+
+AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend", "django.contrib.auth.backends.ModelBackend"]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"]
+        + (["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 25,
+    "COERCE_DECIMAL_TO_STRING": False,     # money as numbers
+    "UNAUTHENTICATED_USER": "django.contrib.auth.models.AnonymousUser",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "30"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=int(os.environ.get("JWT_REFRESH_HOURS", "12"))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# Frontend origins allowed to call the API (production). The Vite dev proxy needs none.
+CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o]
+CORS_ALLOW_HEADERS = ["accept", "authorization", "content-type", "x-requested-with"]
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# Bills and EOBs (PHI): encrypted, outside the repo. Make a key once:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+MESHKOR_UPLOAD_DIR = os.environ.get("MESHKOR_UPLOAD_DIR", str(Path(MESHKOR_DATA_ROOT) / "uploads"))
+MESHKOR_FILE_KEY = os.environ.get("MESHKOR_FILE_KEY", "")
+if not MESHKOR_FILE_KEY and not DEBUG and "test" not in sys.argv:
+    import warnings
+    warnings.warn("MESHKOR_FILE_KEY is not set; bill uploads will fail until it is.")
+MESHKOR_FOUR_EYES = os.environ.get("MESHKOR_FOUR_EYES", "0") == "1"    # a different reviewer must approve
+MESHKOR_PORTAL_URL = os.environ.get("MESHKOR_PORTAL_URL", "http://localhost:5173")
+DATA_UPLOAD_MAX_MEMORY_SIZE = 55 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 55 * 1024 * 1024
+
+# "Report ready" mail. Default prints to the console; set EMAIL_HOST etc. for real mail.
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "reports@meshkor.local")
+
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+# -------------------------------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
