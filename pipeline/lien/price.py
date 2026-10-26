@@ -296,6 +296,13 @@ def mrf_values(mrf: list[dict], group: str, charge_per_unit: float | None, medic
 
 PACKAGED_SI = {"N"}
 COMPREHENSIVE_SI = {"J1"}
+# Lines CMS never packages into a comprehensive APC (C-APC): pass-through drugs and devices (G, H),
+# brachytherapy sources (U), vaccines (L, F). Lines Medicare pays under another fee schedule (labs with
+# status A on the lab fee schedule, therapy on the physician fee schedule, drugs on ASP) are also paid
+# outside the C-APC. Everything else on the visit's claim is packaged into the primary J1 line.
+CAPC_EXCLUDED_SI = {"G", "H", "U", "L", "F"}
+MULTI_PROC_SI = {"T"}           # second and later "T" procedures on a claim are paid at 50 %
+VISIT_GAP_DAYS = 1              # dates further apart than this are separate visits (separate claims)
 
 
 def medicare_line(ref: Ref, ln: BillLine, dos: date) -> dict:
@@ -373,7 +380,6 @@ def _coverage(lines: list[dict], billed: float) -> dict:
 
 def price_outpatient(ref: Ref, bill: Bill, group: str, pf: PriceFile | None, ccr, ccr_src, estimate: bool) -> list[dict]:
     out = []
-    comprehensive = False
     for ln in bill.lines:
         d = _line_dict(ln)
         dos = ln.service_date or bill.date_from
@@ -383,13 +389,14 @@ def price_outpatient(ref: Ref, bill: Bill, group: str, pf: PriceFile | None, ccr
             d["cost"] = money(float(ln.charge) * ccr)
             d["sources"].append(ccr_src)
         m = medicare_line(ref, ln, dos) if dos else None
+        d["_dos"], d["_units"], d["_sign"] = dos, units, sign
         if m:
             d["medicare_status"], d["medicare_source"] = m["status"], m["label"]
             d["medicare"] = money(m["rate"] * units * sign) if m["rate"] is not None else None
             if m["src"]:
                 d["sources"].append(m["src"])
-            comprehensive |= m["si"] in COMPREHENSIVE_SI
-            d["_si"] = m["si"]
+            d["_si"], d["_mrate"] = m["si"], m["rate"]
+            d["_mkind"] = (m["label"] or "").split(" ", 1)[0]       # OPPS | CLFS | MPFS | ASP
         if ln.hcpcs and pf:
             base = m["rate"] if (m and m["status"] == "priced" and m["rate"]) else None
             v = mrf_values(_pick_modifier_rows(ref.mrf_code_rows(pf.period, ln.hcpcs, OUTPATIENT_SETTINGS), ln.modifiers),
@@ -410,23 +417,84 @@ def price_outpatient(ref: Ref, bill: Bill, group: str, pf: PriceFile | None, ccr
         if not ln.hcpcs:
             d["status"] = "packaged" if d["medicare_status"] == "packaged" else "unpriced_no_code"
         out.append(d)
-    if comprehensive:
-        # A comprehensive APC (status J1) pays for the whole visit: the other lines are packaged into it.
-        for d in out:
-            if d.get("_si") not in COMPREHENSIVE_SI and d["medicare_status"] == "priced":
-                d["medicare"], d["medicare_status"] = money(0), "packaged"
-                d["medicare_source"] = "Packaged into the comprehensive APC (status J1) on this bill"
-    if any(d["medicare_status"] == "priced" for d in out):
-        # The visit has a Medicare payment, so its revenue-code-only lines are paid inside it: $0, covered.
-        for d in out:
-            if not d["hcpcs"] and d["medicare_status"] == "packaged" and d["medicare"] is None:
-                d["medicare"] = money(0)
-    else:
-        for d in out:
-            if not d["hcpcs"] and d["medicare_status"] == "packaged":
-                d["medicare_status"], d["medicare_source"] = "none", "No coded line on this bill carries a Medicare payment"
-                d["status"] = "unpriced_no_code"
+    apply_claim_rules(out)
     return out
+
+
+def visits(lines: list[dict]) -> list[list[dict]]:
+    """Group bill lines into visits: one date, or dates at most VISIT_GAP_DAYS apart.
+    Medicare bundles and discounts per claim, and one outpatient visit is one claim."""
+    dated = sorted((d for d in lines if d.get("_dos")), key=lambda d: d["_dos"])
+    groups: list[list[dict]] = []
+    for d in dated:
+        if groups and (d["_dos"] - groups[-1][-1]["_dos"]).days <= VISIT_GAP_DAYS:
+            groups[-1].append(d)
+        else:
+            groups.append([d])
+    undated = [d for d in lines if not d.get("_dos")]
+    if undated:
+        if not groups:
+            groups.append([])
+        groups[0].extend(undated)
+    return groups
+
+
+def apply_claim_rules(lines: list[dict]) -> None:
+    """Medicare's outpatient claim rules, per visit (CMS OPPS):
+    1. Comprehensive APC: the visit's highest-paid J1 line is the primary; the other J1 lines and every
+       other OPPS line are packaged into it ($0), except the C-APC exclusions (CAPC_EXCLUDED_SI) and the
+       lines paid under another fee schedule (lab status A, physician fee schedule, ASP).
+    2. Multiple procedure discount: on a visit without a J1, the highest-paid "T" procedure is paid in full
+       and every other T unit at 50 %.
+    3. A line with only a revenue code is paid inside the coded lines of its visit ($0); with no coded
+       Medicare line in the visit, it has no Medicare value.
+    Lines keep their own rate otherwise. Each change is written into medicare_source."""
+    groups = visits(lines)
+    for vi, visit in enumerate(groups, start=1):
+        tag = f" (visit {vi})" if len(groups) > 1 else ""
+        j1 = [d for d in visit if d.get("_si") in COMPREHENSIVE_SI and d["medicare_status"] == "priced" and d.get("_mrate")]
+        if j1:
+            primary = max(j1, key=lambda d: d["_mrate"])
+            primary["medicare_source"] += f"; primary comprehensive APC (J1) of this visit{tag}"
+            for d in visit:
+                if d is primary or d["medicare_status"] != "priced":
+                    continue
+                si, kind = d.get("_si"), d.get("_mkind")
+                if d.get("_si") in COMPREHENSIVE_SI:
+                    why = "Packaged: a second comprehensive procedure, paid inside the primary J1"
+                elif si in CAPC_EXCLUDED_SI:
+                    d["medicare_source"] += f"; paid separately (status {si} is never packaged into a C-APC)"
+                    continue
+                elif kind in ("CLFS", "MPFS", "ASP"):
+                    d["medicare_source"] += "; paid separately (outside the OPPS bundle, on its own fee schedule)"
+                    continue
+                else:
+                    why = f"Packaged into the comprehensive APC (J1, {primary['hcpcs']}) of this visit"
+                d["medicare"], d["medicare_status"], d["medicare_source"] = money(0), "packaged", why
+        else:
+            t = [d for d in visit if d.get("_si") in MULTI_PROC_SI and d["medicare_status"] == "priced" and d.get("_mrate")]
+            if len(t) > 1 or (t and t[0]["_units"] > 1):
+                t.sort(key=lambda d: d["_mrate"], reverse=True)
+                for i, d in enumerate(t):
+                    full_units = 1 if i == 0 else 0
+                    rest = max(d["_units"] - full_units, 0)
+                    if rest <= 0:
+                        d["medicare_source"] += "; highest procedure of the visit: paid in full"
+                        continue
+                    amount = d["_mrate"] * (full_units + 0.5 * rest) * d["_sign"]
+                    d["medicare"] = money(amount)
+                    d["medicare_source"] += ("; multiple procedure discount: " +
+                                             ("first unit in full, other units at 50 %" if full_units else "paid at 50 % (not the highest procedure of the visit)"))
+        priced = any(d["medicare_status"] == "priced" for d in visit)
+        for d in visit:
+            if d["hcpcs"] or d["medicare_status"] != "packaged":
+                continue
+            if priced:
+                if d["medicare"] is None:
+                    d["medicare"] = money(0)          # paid inside the coded lines of the visit
+            else:
+                d["medicare_status"], d["medicare_source"] = "none", "No coded line in this visit carries a Medicare payment"
+                d["status"] = "unpriced_no_code"
 
 
 def price_inpatient(ref: Ref, bill: Bill, group: str, pf: PriceFile | None, ccr, ccr_src, estimate: bool) -> tuple[list[dict], dict]:
@@ -566,6 +634,12 @@ def flags(bill: Bill, res: Priced, group: str, in_force, nearest, ccr, main: str
     if pm:
         add("estimate", "info", f"Some {group} plans pay a % of Medicare ({', '.join(f'{p:g} %' for p in pm)})",
             "Those plans are valued as that % x the Medicare rate of the line (marked *).")
+    vs = visits(lines)
+    if len(vs) > 1:
+        spans = ", ".join(f"{v[0]['_dos']}" + (f" to {v[-1]['_dos']}" if v[-1]["_dos"] != v[0]["_dos"] else "") for v in vs if v and v[0].get("_dos"))
+        add("other", "info", f"Bill holds {len(vs)} visits: Medicare bundling applied per visit",
+            f"Visits: {spans}. Medicare packages and discounts each visit as its own claim. If two of them were one claim "
+            "(for example a stay that crossed midnight twice), tell MeshKor support.")
     packaged = [d["line_no"] for d in lines if d["medicare_status"] == "packaged"]
     if packaged:
         add("packaged", "info", f"{len(packaged)} line(s) packaged by Medicare",

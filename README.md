@@ -209,8 +209,19 @@ The pricing step picks **the hospital's price file in force on the date of servi
 | **Insurer rate** (`payer_rate`) | The hospital's own posted rate for this code with the patient's insurer. When the insurer has several plans, the median of the plans is used. The insurer name on the bill is turned into a payer group (for example "Anthem", "UnitedHealthcare") by the rules in `config/payer_groups.yaml`. |
 | **Median, p10, p90** | The median and the 10th and 90th percentiles of the hospital's posted rates for the same code with **commercial insurers only** (see 4.6). |
 | **Cash** | The hospital's posted discounted cash price. When the hospital posts none, it is shown as "not posted", never as $0. |
-| **Medicare** | OPPS rate × (0.60 × hospital wage index + 0.40). Labs use the Clinical Lab Fee Schedule. Therapy uses the Physician Fee Schedule (non-facility, Ohio). Drugs use ASP + 6 %. A status-N line is **packaged** ($0). A J1 line (comprehensive APC) packages the other lines of the visit. |
+| **Medicare** | OPPS rate × (0.60 × hospital wage index + 0.40). Labs use the Clinical Lab Fee Schedule. Therapy uses the Physician Fee Schedule (non-facility, Ohio). Drugs use ASP + 6 %. A status-N line is **packaged** ($0). Then Medicare's claim rules are applied **per visit** (see below). |
 | **Cost** | Line charge × the hospital's **cost-to-charge ratio** from its latest Medicare cost report (HCRIS). |
+
+**Medicare's claim rules (per visit):** `apply_claim_rules()` in `price.py`. A **visit** is one date of service, or dates at most 1 day apart; each visit is treated as its own Medicare claim. A bill that holds several visits gets an info flag listing them.
+
+| Rule | What happens |
+|---|---|
+| **Comprehensive APC (status J1)** | The visit's highest-paid J1 line is the primary and is paid in full. The other J1 lines and every other OPPS line of **that visit** are packaged into it ($0). Lines on another visit are not touched. |
+| **Never packaged into a J1** | Pass-through drugs and devices (status G, H), brachytherapy sources (U), vaccines (L, F), and lines Medicare pays on another fee schedule (labs with status A, therapy on the physician fee schedule, ASP drugs) keep their own rate. |
+| **Multiple procedure discount** | On a visit without a J1, the highest-paid procedure with status T is paid in full; every other T unit is paid at 50 %. |
+| **Revenue-code-only lines** | Paid inside the coded lines of their visit ($0). In a visit with no coded Medicare line, they have no Medicare value. |
+
+Every change is written into the line's `medicare_source`, for example "multiple procedure discount: paid at 50 %". These rules follow the CMS OPPS policies. CMS's own outpatient code editor (I/OCE) is the planned next step; once added, it will compute these lines exactly, and these rules will stay as a cross-check.
 
 **Contract rates that are not plain dollars:**
 
@@ -533,7 +544,7 @@ All of these run from the repository root, with `.venv` active.
 
 ## 11. Tests
 
-**Portal and pricing tests (20):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+**Portal and pricing tests (28):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
 
 ```powershell
 $env:DB_ENGINE="sqlite"
@@ -587,7 +598,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 - PDF and CSV report
 - Email when a report is ready
 - Audit log and data-sources page
-- 20 portal tests and 59 pipeline tests
+- 28 portal tests and 59 pipeline tests
 
 **Known limits:**
 

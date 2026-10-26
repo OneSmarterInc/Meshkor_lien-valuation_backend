@@ -148,6 +148,53 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(lines[4]["medicare_status"], "packaged")           # splint 29125 rides on the J1 line
         self.assertEqual(r.totals["medicare"], T.opps_adjusted(6800))
 
+    def _with(self, name, extra):
+        """A synthetic test bill plus extra lines: (date, rev, code, units, charge)."""
+        b = reader.read(bill(name), "b.pdf")
+        n = len(b.lines)
+        for i, (dt, rev, code, units, charge) in enumerate(extra, start=1):
+            b.lines.append(reader.BillLine(n + i, dt, rev, code, "", Decimal(units), f"TEST {code}", Decimal(charge), 0.98))
+        b.date_to = max(ln.service_date for ln in b.lines)
+        return b
+
+    def _price(self, b):
+        con = db.connect()
+        try:
+            return price.price(con, b, "360085", b.payer)
+        finally:
+            con.close()
+
+    def test_capc_bundles_only_its_own_visit_and_keeps_the_exclusions(self):
+        later = date(2026, 9, 2)                                   # B07 surgery is 2026-08-20
+        b = self._with("B07", [(date(2026, 8, 20), "0278", "C1749", 1, 900),    # pass-through device, same visit
+                               (date(2026, 8, 20), "0306", "87070", 1, 80),     # lab on the lab fee schedule (status A)
+                               (later, "0420", "97110", 2, 300)])               # therapy two weeks later: its own visit
+        r = self._price(b)
+        L = {l["hcpcs"]: l for l in r.lines["service_date"] if l["hcpcs"]}
+        self.assertEqual(L["25607"]["medicare"], Decimal(str(T.opps_adjusted(6800))))     # primary J1
+        self.assertEqual(L["29125"]["medicare_status"], "packaged")                        # splint: inside the J1
+        self.assertEqual(L["C1749"]["medicare"], Decimal(str(T.opps_adjusted(400))))       # status H: never packaged
+        self.assertEqual(L["87070"]["medicare"], Decimal("11.00"))                         # lab fee schedule: separate
+        self.assertEqual(L["97110"]["medicare"], Decimal("56.00"))                         # 2 units x $28, own visit
+        self.assertIn("2 visits", " ".join(f["title"] for f in r.flags))
+
+    def test_second_j1_in_the_same_visit_is_packaged(self):
+        b = self._with("B07", [(date(2026, 8, 20), "0360", "29881", 1, 9000)])
+        r = self._price(b)
+        L = {l["hcpcs"]: l for l in r.lines["service_date"] if l["hcpcs"]}
+        self.assertIn("primary comprehensive", L["25607"]["medicare_source"])            # 6800 beats 5000
+        self.assertEqual((L["29881"]["medicare"], L["29881"]["medicare_status"]), (Decimal("0.00"), "packaged"))
+        self.assertEqual(r.totals["medicare"], T.opps_adjusted(6800))
+
+    def test_multiple_procedure_discount_on_t_codes(self):
+        b = self._with("B01", [(date(2026, 8, 14), "0450", "12002", 1, 900), (date(2026, 8, 14), "0450", "11042", 2, 700)])
+        r = self._price(b)
+        L = {l["hcpcs"]: l for l in r.lines["service_date"] if l["hcpcs"]}
+        self.assertEqual(L["12002"]["medicare"], Decimal(str(T.opps_adjusted(500))))                    # highest: full
+        self.assertEqual(L["11042"]["medicare"], Decimal(str(round(T.opps_adjusted(300) * 2 * 0.5, 2))))  # both units at 50 %
+        self.assertIn("multiple procedure discount", L["11042"]["medicare_source"])
+        self.assertEqual(L["99285"]["medicare"], Decimal(str(T.opps_adjusted(600))))                    # status V: no discount
+
     def test_inpatient_stay_priced_as_one_drg(self):
         b = reader.read(bill("B08"), "b.pdf")
         con = db.connect()
