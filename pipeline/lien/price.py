@@ -22,6 +22,9 @@ from .db import objects, rows
 from .reader import Bill, BillLine
 
 SELF_PAY = "Self-pay"
+# Payer groups left out of the median, 10th and 90th percentile (decision of Oct 26, 2026): the median
+# is the typical COMMERCIAL insurer's rate. Government plans have their own benchmark (the Medicare line).
+NOT_COMMERCIAL = {"Medicare", "Medicare Advantage", "Medicaid", "Government other", "Workers Comp", SELF_PAY}
 OUTPATIENT_SETTINGS = ("outpatient", "both")
 INPATIENT_SETTINGS = ("inpatient", "both")
 
@@ -95,9 +98,9 @@ class Ref:
         return f"concat_ws(' | ', {', '.join(cols)}) AS terms" if cols else "NULL AS terms"
 
     def _fill_groups(self, out: list[dict]) -> list[dict]:
+        # Always from config/payer_groups.yaml, so a rule change applies at once (no reload of the price files).
         for r in out:
-            if r["payer_group"] is None:
-                r["payer_group"] = payer_group(r["payer_name"], r["plan_name"])
+            r["payer_group"] = payer_group(r["payer_name"], r["plan_name"])
         return out
 
     def q(self, sql, params=()):
@@ -263,7 +266,7 @@ def mrf_values(mrf: list[dict], group: str, charge_per_unit: float | None, medic
 
     every = []
     for r in mrf:
-        if r["payer_group"] == SELF_PAY:
+        if r["payer_group"] in NOT_COMMERCIAL:
             continue
         v, est = value(r)
         if v is not None and (not est or pct_of_medicare(r) is not None):

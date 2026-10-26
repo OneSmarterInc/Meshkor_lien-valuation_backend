@@ -11,11 +11,16 @@ from .serializers import LineSerializer
 METHOD = ("Each billed line is matched by its HCPCS/CPT code to the hospital's own published price file for the "
           "date of service, to the Medicare rate for this hospital, and to the hospital's cost from its Medicare "
           "cost report. A line with a revenue code but no HCPCS/CPT code is valued at cost only; Medicare pays it "
-          "inside the coded lines of the visit. An inpatient stay is valued as one MS-DRG.")
+          "inside the coded lines of the visit. An inpatient stay is valued as one MS-DRG. The median and the "
+          "10th and 90th percentiles use the hospital's rates with commercial insurers only (employer, individual "
+          "and ACA exchange plans, and PPO networks); Medicare, Medicare Advantage, Medicaid and other government "
+          "plans are left out because Medicare is shown as its own benchmark.")
 LIMITS = ("Values marked as estimates come from a contract posted as a percentage (of billed charges, or of "
           "Medicare) rather than as dollars, or from a price file that does not cover the date of service. A cash "
           "price is shown only when the hospital posts one. A benchmark total adds up only the lines that have a "
-          "value; its percentage compares it with the billed charges of those same lines. The Medicare inpatient "
+          "value; its percentage compares it with the billed charges of those same lines. For a contract posted as a "
+          "percentage of billed charges, the hospital's own dollar estimate is used, which follows its list prices. "
+          "The Medicare inpatient "
           "amount is the IPPS estimate without outlier, transfer or new-technology payments.")
 
 LINE_COLS = ["line_no", "service_date", "revenue_code", "hcpcs", "modifiers", "units", "description", "charge",
@@ -38,7 +43,7 @@ def _summary(case: Case, t: dict, billed, payer: str, stay: dict | None) -> list
     est = bool(t.get("payer_rate_is_estimate") or (stay or {}).get("payer_rate_is_estimate"))
     rows = [("billed", "Billed charges", billed),
             ("payer_rate", "No insurer on the bill" if self_pay else f"Hospital's own rate with {payer}" + (" (estimate)" if est else ""), t.get("payer_rate")),
-            ("median", "Hospital's median negotiated rate", t.get("median")),
+            ("median", "Median of the hospital's commercial insurer rates", t.get("median")),
             ("cash", "Hospital's cash price", t.get("cash")),
             ("cost", "Hospital's cost (cost report)", t.get("cost")),
             ("medicare", "Medicare rate for this hospital", t.get("medicare"))]
@@ -120,7 +125,7 @@ def build(case: Case, basis: str | None = None) -> dict:
                 text += " Part of this rate is an estimate (a percentage contract)."
         md = by_key.get("median")
         if md and md["total"] is not None:
-            text += f" The median of all its negotiated rates is ${md['total']:,.2f}" + (f" ({md['pct_of_billed']} %)." if md["pct_of_billed"] is not None else ".")
+            text += f" The median of its rates with commercial insurers is ${md['total']:,.2f}" + (f" ({md['pct_of_billed']} %)." if md["pct_of_billed"] is not None else ".")
         mc = by_key.get("medicare")
         if mc and mc["total"] is not None:
             text += f" Medicare would pay this hospital ${mc['total']:,.2f}" + (f" ({mc['pct_of_billed']} %)." if mc["pct_of_billed"] is not None else ".")

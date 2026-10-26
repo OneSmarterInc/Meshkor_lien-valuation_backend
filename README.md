@@ -7,7 +7,7 @@ A hospital bill shows "billed charges". These are list prices, and almost nobody
 1. A law firm uploads the hospital bill.
 2. The system reads every line and prices it against official public data:
    - the hospital's own posted rate with the patient's insurer,
-   - the median of all its posted rates,
+   - the median of its posted rates with commercial insurers,
    - its cash price,
    - what Medicare pays this hospital,
    - the hospital's cost.
@@ -197,7 +197,7 @@ The pricing step picks **the hospital's price file in force on the date of servi
 | Value | How it is found |
 |---|---|
 | **Insurer rate** (`payer_rate`) | The hospital's own posted rate for this code with the patient's insurer. When the insurer has several plans, the median of the plans is used. The insurer name on the bill is turned into a payer group (for example "Anthem", "UnitedHealthcare") by the rules in `config/payer_groups.yaml`. |
-| **Median, p10, p90** | The median and the 10th and 90th percentiles of every payer's posted rate for the same code. |
+| **Median, p10, p90** | The median and the 10th and 90th percentiles of the hospital's posted rates for the same code with **commercial insurers only** (see 4.6). |
 | **Cash** | The hospital's posted discounted cash price. When the hospital posts none, it is shown as "not posted", never as $0. |
 | **Medicare** | OPPS rate × (0.60 × hospital wage index + 0.40). Labs use the Clinical Lab Fee Schedule. Therapy uses the Physician Fee Schedule (non-facility, Ohio). Drugs use ASP + 6 %. A status-N line is **packaged** ($0). A J1 line (comprehensive APC) packages the other lines of the visit. |
 | **Cost** | Line charge × the hospital's **cost-to-charge ratio** from its latest Medicare cost report (HCRIS). |
@@ -238,9 +238,15 @@ The totals, the report, the PDF and the CSV then use the **estimate** basis (`to
 - `totals.coverage` gives the billed dollars and the share of the bill those lines cover. When it is under 100 %, the report's "% of billed" compares the total with the billed charges of the **same lines**, and a note under the benchmark says so ("4 of 11 lines, 61 % of billed charges; the % compares those lines only"). A benchmark on less than half of the billed charges (for example a cash price posted on one lab line) is listed without a percentage, marked "not comparable with the bill". The summary sentence, the table, the PDF and the screen all use this same rule.
 - A law firm user sees the values, lines and report **only after release**. Before that, the case shows progress only.
 
-### 4.6 Open decision: which payers count in the median
+### 4.6 Which payers count in the median (decided October 26, 2026)
 
-Today the median and the p10/p90 use **all payers**, including Medicare Advantage and Medicaid plans. The proposed rule is **commercial insurers only**, because Medicare already has its own column. This is not decided yet. When it is, the rule changes in one place: `mrf_values()` in `price.py`.
+The median and the 10th/90th percentiles use **commercial insurers only**: employer and individual plans, ACA exchange plans, PPO networks and TPAs. **Left out:** Medicare, Medicare Advantage, Medicaid, other government plans, workers' comp and self-pay. Medicare has its own benchmark line, so counting government rates in the median too would mix two different benchmarks.
+
+- The list of excluded groups is `NOT_COMMERCIAL` in `pipeline/lien/price.py`. Which group a plan belongs to comes from `config/payer_groups.yaml` and is worked out again on every pricing run, so a rule change there applies at once.
+- ACA exchange plans (for example "CareSource - Exchange", "Buckeye Ambetter Exchange") have their own group, `ACA Exchange`, and count as commercial.
+- The **patient's own insurer rate** is not affected: a Medicare Advantage patient still gets their own plan's rate in the insurer line.
+- Example, OSU, MS-DRG 481: 43 posted rates; 16 government plans left out; median of the 27 commercial rates **$61,642.56** (all 43: $42,572.81).
+- Many commercial contracts are a percentage of billed charges; for those the hospital's own dollar estimate is used, which follows its list prices. The report's limits text says so.
 
 ---
 
@@ -517,7 +523,7 @@ All of these run from the repository root, with `.venv` active.
 
 ## 11. Tests
 
-**Portal and pricing tests (19):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+**Portal and pricing tests (20):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
 
 ```powershell
 $env:DB_ENGINE="sqlite"
@@ -571,7 +577,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 - PDF and CSV report
 - Email when a report is ready
 - Audit log and data-sources page
-- 19 portal tests and 59 pipeline tests
+- 20 portal tests and 59 pipeline tests
 
 **Known limits:**
 
@@ -583,7 +589,6 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 | Only 2 hospitals have price files | Other hospitals go to `no_price_file` | Load Miami Valley (JSON) and Cleveland Clinic, then the other Ohio hospitals |
 | 2024–2025 price-file history | No free complete source | Use the estimate basis; archived files must be labeled as not official |
 | Inpatient Medicare | IPPS estimate without outliers or transfers | Add outlier logic and the CMS grouper if needed |
-| Median rule | All payers | Decide on commercial-only ([section 4.6](#46-open-decision-which-payers-count-in-the-median)) |
 | Pricing runs inside the upload request | A few seconds per bill | Move it to a background queue if volume grows |
 | PDF layout | Simple one-column report | Designed report layout |
 

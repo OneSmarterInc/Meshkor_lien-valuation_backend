@@ -193,7 +193,7 @@ The report as data, for the on-screen preview (the PDF is built from the same da
     {"key": "billed",     "benchmark": "Billed charges",                    "total": 9647.87, "pct_of_billed": 100, "coverage_pct": 100, "note": ""},
     {"key": "payer_rate", "benchmark": "Hospital's own rate with Anthem",   "total": 2472.36, "pct_of_billed": 42,  "coverage_pct": 61,
                           "note": "4 of 11 lines, 61 % of billed charges; the % compares those lines only"},
-    {"key": "median",     "benchmark": "Hospital's median negotiated rate", "total": 2396.76, "pct_of_billed": 40,  "coverage_pct": 61, "note": "…"},
+    {"key": "median",     "benchmark": "Median of the hospital's commercial insurer rates", "total": 2396.76, "pct_of_billed": 40,  "coverage_pct": 61, "note": "…"},
     {"key": "cash",       "benchmark": "Hospital's cash price",             "total": 15.00,   "pct_of_billed": null, "coverage_pct": 1,
                           "note": "posted on only 1 of 11 lines (1 % of billed charges): not comparable with the bill"},
     {"key": "cost",       "benchmark": "Hospital's cost (cost report)",     "total": 2026.05, "pct_of_billed": 21,  "coverage_pct": 100, "note": ""},

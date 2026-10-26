@@ -60,7 +60,7 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(r.payer_group, "Anthem"); self.assertTrue(r.price_file.covers_service_date)
         er = r.lines["service_date"][0]
         self.assertEqual(er["payer_rate"], Decimal("1450.00"))          # median of the 2 Anthem outpatient plans; inpatient row ignored
-        self.assertEqual(er["median"], Decimal("1450.00"))              # median of 1300, 1400, 1500, 1700
+        self.assertEqual(er["median"], Decimal("1450.00"))              # commercial only: 1300, 1400, 1500, 1700 (Humana MA 620, Medicaid 450 left out)
         self.assertEqual(er["medicare"], Decimal(str(T.opps_adjusted(600))))
         self.assertEqual(er["cost"], Decimal("714.63"))                 # 3403 x 0.21
         ct = r.lines["service_date"][1]
@@ -106,7 +106,7 @@ class ReaderAndPriceTests(SimpleTestCase):
         v = r.stay["values"]
         self.assertEqual(r.stay["ms_drg"], "481"); self.assertEqual(r.stay["los_days"], 3)
         self.assertEqual(v["payer_rate"], 22000.0)                          # UnitedHealthcare
-        self.assertEqual(v["median"], 24000.0)                              # 22000 and 26000 (percent-only Aetna left out)
+        self.assertEqual(v["median"], 22000.0)                              # commercial: exchange 20401.30, UHC 22000, Anthem 26000 (Medicare left out)
         self.assertEqual(v["medicare"], T.ipps_total(2.0))
         self.assertEqual(v["cost"], round(58612 * T.CCR, 2))
         self.assertEqual(r.totals["payer_rate"], 22000.0)
@@ -157,6 +157,17 @@ class ReaderAndPriceTests(SimpleTestCase):
         r = price.price(con, b, "360085", b.payer)
         con.close()
         self.assertEqual(r.lines["service_date"][0]["payer_rate"], Decimal("1450.00"))
+
+    def test_patient_on_a_government_plan_still_gets_its_own_rate(self):
+        # The median is commercial only, but a Medicare Advantage patient's own plan rate is still shown.
+        b = reader.read(bill("B01"), "b.pdf")
+        con = db.connect()
+        r = price.price(con, b, "360085", "Humana Medicare Advantage")
+        con.close()
+        er = r.lines["service_date"][0]
+        self.assertEqual(r.payer_group, "Medicare Advantage")
+        self.assertEqual(er["payer_rate"], Decimal("620.00"))
+        self.assertEqual(er["median"], Decimal("1450.00"))
 
     def test_hospital_match_by_npi_and_by_name(self):
         con = db.connect()

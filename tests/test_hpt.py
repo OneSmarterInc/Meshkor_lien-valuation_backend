@@ -121,6 +121,9 @@ def test_payer_group_rules():
     assert payer_group("Molina", "Molina - Medicaid") == "Medicaid"
     assert payer_group("Multiplan", "Multiplan") == "PPO network / TPA"
     assert payer_group("Some Unknown Co", None) == "Other"
+    assert payer_group("CareSource", "CareSource - Exchange") == "ACA Exchange"     # private plan, not Medicaid
+    assert payer_group("Buckeye Community", "Buckeye Ambetter Exchange") == "ACA Exchange"
+    assert payer_group("CareSource", "CareSource - DSNP") == "Medicaid"
 
 
 def test_read_prefix_and_layout(tmp_path):

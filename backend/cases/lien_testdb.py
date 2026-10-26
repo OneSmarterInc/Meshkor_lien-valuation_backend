@@ -22,6 +22,8 @@ MRF = [
     ("99285", None, "Outpatient", "Anthem", "Anthem", "Anthem HMO", 1500.0, None, None),
     ("99285", None, "Outpatient", "UnitedHealthcare", "UHC", "UHC Choice", 1300.0, None, None),
     ("99285", None, "Outpatient", "Aetna", "Aetna", "Aetna Open", 1700.0, None, None),
+    ("99285", None, "Outpatient", "Medicare Advantage", "Humana", "Humana - Medicare", 620.0, None, None),   # government: not in the median
+    ("99285", None, "Outpatient", "Medicaid", "Molina", "Molina - Medicaid", 450.0, None, None),
     ("99285", None, "Inpatient", "Anthem", "Anthem", "Anthem PPO", 9999.0, None, None),     # wrong setting, never used
     ("70450", None, "Both", "Anthem", "Anthem", "Anthem PPO", None, 40.0, None),           # percentage only
     ("70450", None, "Both", "Aetna", "Aetna", "Aetna Open", 700.0, None, None),
@@ -34,6 +36,8 @@ MRF = [
     (None, "481", "Inpatient", "UnitedHealthcare", "UHC", "UHC Choice", 22000.0, None, None),
     (None, "481", "Inpatient", "Anthem", "Anthem", "Anthem PPO", 26000.0, None, None),
     (None, "481", "Inpatient", "Aetna", "Aetna", "Aetna Open", None, 55.0, None),
+    (None, "481", "Inpatient", "Medicare", "Medicare", "Medicare", 13162.13, None, None),       # government: not in the median
+    (None, "481", "Inpatient", "ACA Exchange", "CareSource", "CareSource - Exchange", 20401.30, None, None),
     (None, "470", "Inpatient", "UnitedHealthcare", "UHC", "UHC Choice", 18000.0, None, None),
 ]
 
