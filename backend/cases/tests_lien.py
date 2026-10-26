@@ -29,6 +29,13 @@ def bill(name):
     return (BILLS / f"{name}_TEST_bill.pdf").read_bytes()
 
 
+EOBS = BILLS.parent / "test_eobs"
+
+
+def eob(name):
+    return (EOBS / f"{name}_TEST_eob.pdf").read_bytes()
+
+
 @mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
 class ReaderAndPriceTests(SimpleTestCase):
     def test_reader_gets_header_lines_and_total(self):
@@ -302,7 +309,7 @@ class ReaderAndPriceTests(SimpleTestCase):
 
 @override_settings(MESHKOR_FILE_KEY=Fernet.generate_key().decode(), MESHKOR_UPLOAD_DIR=TMP)
 @mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
-class IntakeApiTests(APITestCase):
+class ApiBase(APITestCase):
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
@@ -314,10 +321,17 @@ class IntakeApiTests(APITestCase):
         r = self.client.post("/api/auth/login/", {"email": "rev@mk.test", "password": "pw-12345"}, format="json")
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
 
-    def upload(self, name):
-        return self.client.post("/api/cases/", {"report_for": "plaintiff", "consent": "true", "firm_id": self.firm.id,
-                                                "bill": SimpleUploadedFile(f"{name}.pdf", bill(name), content_type="application/pdf")},
-                                format="multipart")
+    def upload(self, name, eob_name=None, eob_bytes=None, eob_file="eob.pdf"):
+        d = {"report_for": "plaintiff", "consent": "true", "firm_id": self.firm.id,
+             "bill": SimpleUploadedFile(f"{name}.pdf", bill(name), content_type="application/pdf")}
+        if eob_name or eob_bytes:
+            d["eob"] = SimpleUploadedFile(eob_file, eob_bytes or eob(eob_name))
+        return self.client.post("/api/cases/", d, format="multipart")
+
+
+@override_settings(MESHKOR_FILE_KEY=Fernet.generate_key().decode(), MESHKOR_UPLOAD_DIR=TMP)
+@mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
+class IntakeApiTests(ApiBase):
 
     def test_upload_prices_the_bill(self):
         r = self.upload("B01")
@@ -455,3 +469,112 @@ class IntakeApiTests(APITestCase):
              mock.patch.object(processing, "_submit", side_effect=lambda c, u: processing.price_waiting_case(c, u)):
             self.client.get("/api/cases/")                                  # a reviewer opens the case list
         self.assertEqual(Case.objects.get(pk=cid).status, "needs_review")
+
+
+class EobReaderTests(SimpleTestCase):
+    """pipeline/lien/eob.py on the 3 synthetic EOB layouts."""
+
+    def test_anthem_layout_line_by_line(self):
+        from pipeline.lien import eob as E
+        e = E.read(eob("B01"))
+        self.assertEqual((e.claim_number, e.provider, str(e.date_from)), ("TEST-CLM-B01", "OHIO STATE UNIVERSITY HOSPITALS", "2026-08-14"))
+        self.assertIn("Anthem", e.payer)
+        self.assertEqual(e.columns, ["billed", "allowed", "deductible", "copay", "coinsurance", "paid", "patient"])
+        self.assertEqual((str(e.total("allowed")), str(e.total("paid")), str(e.total("patient"))), ("3501.80", "2401.44", "1100.36"))
+        self.assertEqual(e.total("allowed"), e.stated_totals["allowed"])          # the lines add up to the EOB's own total
+        b = reader.read(bill("B01"), "b.pdf")
+        m = E.match(e, b.lines)
+        self.assertEqual(len(m), 11)
+        self.assertEqual(str(m[1].get("allowed")), "1450.00")
+
+    def test_other_column_order_and_two_digit_years(self):
+        from pipeline.lien import eob as E
+        e = E.read(eob("B07"))
+        self.assertEqual(e.columns, ["billed", "discount", "allowed", "not_covered", "deductible", "coinsurance", "paid", "patient"])
+        self.assertEqual(str(e.date_from), "2026-08-20")
+        m = E.match(e, reader.read(bill("B07"), "b.pdf").lines)
+        self.assertEqual(len(m), 7)                                               # lines with only a revenue code match too
+        self.assertEqual(str(m[4].get("allowed")), "2900.00")                     # 0278 implant
+        self.assertEqual(m[2].revenue_code, "0370")
+
+    def test_inpatient_eob_is_compared_as_one_stay(self):
+        from pipeline.lien import eob as E
+        e = E.read(eob("B08"))
+        self.assertEqual((e.ms_drg, str(e.total("allowed"))), ("481", "47909.59"))
+        s, per_line, flags = E.compare(e, reader.read(bill("B08"), "b.pdf"), "UnitedHealthcare", payer_rate_total=47909.59)
+        self.assertEqual((s["level"], per_line), ("stay", {}))
+        self.assertEqual(s["vs_price_file"]["pct"], 0)
+        self.assertFalse([f for f in flags if f["severity"] == "check"])
+
+    def test_a_bill_is_not_an_eob(self):
+        from pipeline.lien import eob as E
+        with self.assertRaises(E.EobNotReadable):
+            E.read(bill("B01"))
+
+    def test_eob_for_another_claim_is_flagged(self):
+        from pipeline.lien import eob as E
+        s, _pl, flags = E.compare(E.read(eob("B08")), reader.read(bill("B01"), "b.pdf"), "Anthem")
+        titles = " | ".join(f["title"] for f in flags if f["severity"] == "check")
+        self.assertIn("EOB is from UnitedHealthcare, the bill names Anthem", titles)
+        self.assertIn("dates of service do not overlap", titles)
+        self.assertIn("billed total differs", titles)
+
+    def test_photo_of_an_eob_is_read_by_ocr(self):
+        import pypdfium2 as pdfium
+        from io import BytesIO
+        from pipeline.lien import eob as E
+        img = pdfium.PdfDocument(eob("B01"))[0].render(scale=200 / 72).to_pil()
+        buf = BytesIO(); img.save(buf, "PNG")
+        e = E.read(buf.getvalue(), "eob.png")
+        self.assertEqual(e.method, "ocr")
+        self.assertEqual(str(e.total("allowed")), "3501.80")
+        self.assertLessEqual(e.ocr_score, 0.95)
+
+
+@override_settings(MESHKOR_FILE_KEY=Fernet.generate_key().decode(), MESHKOR_UPLOAD_DIR=TMP)
+@mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
+class EobApiTests(ApiBase):
+    """Bill + EOB through the API, report, CSV and PDF."""
+
+    def test_upload_with_eob_fills_the_report(self):
+        r = self.upload("B01", "B01")
+        self.assertEqual(r.data["status"], "needs_review")
+        cid = r.data["id"]
+        det = self.client.get(f"/api/cases/{cid}/").data
+        self.assertEqual(det["eob"]["totals"]["allowed"], 3501.8)
+        self.assertEqual((det["eob"]["lines_matched"], det["eob"]["bill_lines"]), (11, 11))
+        kinds = {f["kind"] for f in det["flags"]}
+        self.assertNotIn("no_eob", kinds); self.assertIn("eob", kinds)
+        self.assertIn("vs_price_file", det["eob"])
+        lines = self.client.get(f"/api/cases/{cid}/lines/").data
+        self.assertEqual((lines[0]["eob_allowed"], lines[0]["eob_paid"], lines[0]["eob_patient"]), (1450.0, 760.0, 690.0))
+        rep = self.client.get(f"/api/cases/{cid}/report/").data
+        keys = [x["key"] for x in rep["summary"]]
+        self.assertEqual(keys[:4], ["billed", "eob_allowed", "eob_paid", "payer_rate"])
+        ea = rep["summary"][1]
+        self.assertEqual((ea["total"], ea["pct_of_billed"]), (3501.8, round(100 * 3501.8 / 9647.87)))
+        self.assertIn("allowed $3,501.80 (36 % of billed) and paid $2,401.44; the patient's share was $1,100.36", rep["summary_text"])
+        self.assertEqual(rep["eob"]["claim_number"], "TEST-CLM-B01")
+        self.assertNotIn("file_name", rep["eob"])
+        self.assertIn("Insurer EOB uploaded with the case", [s["data"] for s in rep["sources"]])
+        csv_ = self.client.get(f"/api/cases/{cid}/report.csv").content.decode("utf-8-sig")
+        self.assertIn("eob_allowed", csv_); self.assertIn("3501.8", csv_)
+        pdf = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertEqual(pdf.content[:4], b"%PDF")
+
+    def test_inpatient_eob(self):
+        cid = self.upload("B08", "B08").data["id"]
+        det = self.client.get(f"/api/cases/{cid}/").data
+        self.assertEqual((det["eob"]["level"], det["eob"]["ms_drg"]), ("stay", "481"))
+        rep = self.client.get(f"/api/cases/{cid}/report/").data
+        self.assertEqual(rep["summary"][1]["total"], 47909.59)
+
+    def test_unreadable_eob_does_not_stop_the_case(self):
+        r = self.upload("B01", eob_bytes=bill("B07"))                     # a bill put in the EOB box
+        self.assertEqual(r.data["status"], "needs_review")
+        det = self.client.get(f"/api/cases/{r.data['id']}/").data
+        self.assertIsNone(det["eob"])
+        f = [x for x in det["flags"] if x["title"] == "The EOB could not be read"]
+        self.assertEqual(f[0]["severity"], "check")
+        rep = self.client.get(f"/api/cases/{r.data['id']}/report/").data
+        self.assertNotIn("eob_allowed", [x["key"] for x in rep["summary"]])

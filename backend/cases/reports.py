@@ -21,11 +21,37 @@ LIMITS = ("Values marked as estimates come from a contract posted as a percentag
           "value; its percentage compares it with the billed charges of those same lines. For a contract posted as a "
           "percentage of billed charges, the hospital's own dollar estimate is used, which follows its list prices. "
           "The Medicare inpatient "
-          "amount is the IPPS estimate without outlier, transfer or new-technology payments.")
+          "amount is the IPPS estimate without outlier, transfer or new-technology payments. Allowed and paid amounts "
+          "marked EOB are read from the insurer's Explanation of Benefits uploaded with the case and checked by a reviewer "
+          "against that document.")
 
 LINE_COLS = ["line_no", "service_date", "revenue_code", "hcpcs", "modifiers", "units", "description", "charge",
              "payer_rate", "payer_rate_is_estimate", "median", "p10", "p90", "cash", "medicare", "medicare_status",
-             "medicare_source", "cost", "status"]
+             "medicare_source", "cost", "eob_allowed", "eob_paid", "eob_patient", "status"]
+
+
+def _eob_rows(case: Case, billed) -> list[dict]:
+    """Allowed and paid from the insurer's EOB: the insurer's own amounts for this claim."""
+    e = case.eob or {}
+    t = e.get("totals") or {}
+    if not e or (t.get("allowed") is None and t.get("paid") is None):
+        return []
+    who = e.get("payer") or case.payer_name or "the insurer"
+    eb = t.get("billed")
+    whole = eb is None or not billed or abs(eb - billed) <= 0.5
+    base = billed if whole else eb
+    note_base = "" if whole else f"the EOB covers ${eb:,.2f} of billed charges; the % compares with that"
+    out = []
+    if t.get("allowed") is not None:
+        out.append({"key": "eob_allowed", "benchmark": f"Allowed by {who} for this claim (EOB)", "total": t["allowed"],
+                    "pct_of_billed": _pct(t["allowed"], base), "coverage_pct": 100 if whole else (round(100 * eb / billed) if billed else None),
+                    "note": "; ".join(x for x in ["the insurer's contract amount, from the EOB", note_base] if x)})
+    if t.get("paid") is not None:
+        pt = t.get("patient")
+        out.append({"key": "eob_paid", "benchmark": f"Paid by {who} (EOB)", "total": t["paid"], "pct_of_billed": _pct(t["paid"], base),
+                    "coverage_pct": 100 if whole else (round(100 * eb / billed) if billed else None),
+                    "note": (f"plus the patient's share ${pt:,.2f} (deductible, copay, coinsurance)" if pt is not None else "")})
+    return out
 
 
 def _pct(x, billed):
@@ -49,6 +75,8 @@ def _summary(case: Case, t: dict, billed, payer: str, stay: dict | None) -> list
             ("medicare", "Medicare rate for this hospital", t.get("medicare"))]
     out = []
     for key, label, total in rows:
+        if key == "payer_rate":
+            out += _eob_rows(case, billed)
         if key == "cash" and total is None:
             continue
         row = {"key": key, "benchmark": label, "total": total, "pct_of_billed": None, "coverage_pct": None, "note": ""}
@@ -77,6 +105,13 @@ def _summary(case: Case, t: dict, billed, payer: str, stay: dict | None) -> list
     return out
 
 
+def _eob_public(e: dict | None) -> dict | None:
+    if not e:
+        return None
+    keep = ("payer", "plan", "claim_number", "date_from", "date_to", "ms_drg", "level", "totals", "lines", "lines_matched", "bill_lines", "vs_price_file")
+    return {k: e.get(k) for k in keep}
+
+
 def report_basis(case: Case) -> str:
     """The basis the totals were built on: the file in force, or the nearest file (estimates)."""
     return (case.totals or {}).get("basis") or "service_date"
@@ -101,6 +136,9 @@ def build(case: Case, basis: str | None = None) -> dict:
         pf = case.price_file
         sources.append({"data": "Hospital price file", "file_name": pf.get("file_name"), "dated": pf.get("last_updated_on"), "sha256": pf.get("sha256")})
         seen.add(("Hospital price file", pf.get("file_name")))
+    if case.eob and case.eob.get("file_name"):
+        sources.append({"data": "Insurer EOB uploaded with the case", "file_name": case.eob.get("file_name"),
+                        "dated": None, "sha256": case.eob.get("sha256")})
     extra = ((st.values or {}).get("sources") if st is not None else None) or []
     for src in list(extra) + [s for ln in lines for s in (ln.get("sources") or [])]:
         k = (src.get("label"), src.get("file_name"))
@@ -110,6 +148,16 @@ def build(case: Case, basis: str | None = None) -> dict:
     by_key = {r["key"]: r for r in summary}
     if billed:
         text = f"The hospital billed ${billed:,.2f}."
+        ea, ep = by_key.get("eob_allowed"), by_key.get("eob_paid")
+        if ea or ep:
+            who = (case.eob or {}).get("payer") or payer
+            parts = []
+            if ea:
+                parts.append(f"allowed ${ea['total']:,.2f}" + (f" ({ea['pct_of_billed']} % of billed)" if ea["pct_of_billed"] is not None else ""))
+            if ep:
+                parts.append(f"paid ${ep['total']:,.2f}")
+            pt = ((case.eob or {}).get("totals") or {}).get("patient")
+            text += f" The insurer's EOB for this claim shows that {who} " + " and ".join(parts) + (f"; the patient's share was ${pt:,.2f}." if pt is not None else ".")
         if stay and stay["ms_drg"]:
             text += f" The stay is valued as MS-DRG {stay['ms_drg']} ({stay['drg_title']}){f', {stay['los_days']} days' if stay['los_days'] is not None else ''}."
         pr = by_key.get("payer_rate")
@@ -140,6 +188,7 @@ def build(case: Case, basis: str | None = None) -> dict:
         "case_number": case.case_number, "matter_ref": case.matter_ref, "hospital_name": case.hospital_name or None,
         "service_date_from": case.service_date_from, "service_date_to": case.service_date_to, "setting": case.setting,
         "summary": summary, "summary_text": text, "lines": lines, "sources": sources, "stay": stay,
+        "eob": _eob_public(case.eob),
         "method": METHOD, "limits": LIMITS,
         "reviewer": {"name": ((case.approved_by.get_full_name() or case.approved_by.email) if case.approved_by else None),
                      "approved_at": case.sent_at},
@@ -158,6 +207,10 @@ def csv_bytes(case: Case) -> bytes:
         w.writerow(["ms_drg", st.ms_drg, "drg_title", st.drg_title, "los_days", st.los_days, "drg_confirmed", st.drg_confirmed,
                     "stay_payer_rate", v.get("payer_rate"), "stay_median", v.get("median"), "stay_p10", v.get("p10"), "stay_p90", v.get("p90"),
                     "stay_cash", v.get("cash"), "stay_medicare", v.get("medicare"), "stay_cost", v.get("cost")])
+    if case.eob:
+        et = case.eob.get("totals") or {}
+        w.writerow(["eob_payer", case.eob.get("payer"), "eob_claim", case.eob.get("claim_number"), "eob_ms_drg", case.eob.get("ms_drg"),
+                    "eob_billed", et.get("billed"), "eob_allowed", et.get("allowed"), "eob_paid", et.get("paid"), "eob_patient", et.get("patient")])
     w.writerow(LINE_COLS + ["source_files"])
     for ln in LineSerializer(case.lines.filter(basis=basis), many=True).data:
         w.writerow([ln.get(c) for c in LINE_COLS] + ["; ".join(f"{s.get('label')}: {s.get('file_name')}" for s in ln.get("sources") or [])])
@@ -200,15 +253,18 @@ def pdf_bytes(case: Case, draft: bool) -> bytes:
                             f"{('Posted rates for this DRG range from ' + money(stay['p10']) + ' (10th percentile) to ' + money(stay['p90']) + ' (90th).') if stay.get('p10') is not None else ''}",
                             st["BodyText"]), Spacer(1, 10)]
     story += [Paragraph("Lines", st["Heading3"])]
-    rows = [["#", "Date", "Rev", "Code", "Units", "Description", "Charge", "Payer", "Median", "Medicare", "Cost"]]
+    has_eob = any(ln.get("eob_allowed") is not None for ln in r["lines"])
+    rows = [["#", "Date", "Rev", "Code", "Units", "Description", "Charge", "Payer", "Median", "Medicare", "Cost"] + (["EOB allowed"] if has_eob else [])]
     for ln in r["lines"]:
         pay = money(ln["payer_rate"]) + ("*" if (ln["payer_rate"] is not None and ln.get("payer_rate_is_estimate")) else "")
         med = "pkg" if ln.get("medicare_status") == "packaged" and not ln["medicare"] else money(ln["medicare"])
         rows.append([ln["line_no"], ln["service_date"] or "", ln["revenue_code"], ln["hcpcs"], f"{ln['units']:g}" if ln.get("units") is not None else "",
-                     (ln["description"] or "")[:30], money(ln["charge"]), pay, money(ln["median"]), med, money(ln["cost"])])
+                     (ln["description"] or "")[:(22 if has_eob else 30)], money(ln["charge"]), pay, money(ln["median"]), med, money(ln["cost"])]
+                    + ([money(ln.get("eob_allowed"))] if has_eob else []))
     if len(rows) == 1:
         rows.append(["", "", "", "", "", "No priced lines yet", "", "", "", "", ""])
-    lt = Table(rows, repeatRows=1, colWidths=[0.3 * inch, 0.72 * inch, 0.38 * inch, 0.5 * inch, 0.4 * inch, 1.75 * inch] + [0.65 * inch] * 5)
+    lt = Table(rows, repeatRows=1, colWidths=[0.3 * inch, 0.72 * inch, 0.38 * inch, 0.5 * inch, 0.4 * inch, (1.15 if has_eob else 1.75) * inch]
+               + [0.65 * inch] * (6 if has_eob else 5))
     lt.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 7), ("GRID", (0, 0), (-1, -1), 0.2, colors.lightgrey),
                             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef5")), ("ALIGN", (6, 1), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story += [lt, Paragraph("* estimate (percentage contract or price file outside the date of service) · pkg = packaged into another Medicare payment · — = no value", small),

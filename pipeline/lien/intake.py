@@ -13,7 +13,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from . import match, price, reader
+from . import eob as eob_reader, match, price, reader
 from .db import ReferenceDataMissing, connect
 
 log = logging.getLogger("meshkor.lien")
@@ -35,6 +35,30 @@ def _fail(case, detail: str, user=None):
     case.status, case.status_detail = case.Status.ERROR, detail
     case.save(update_fields=["status", "status_detail", "updated_at"])
     audit(user, "Processing stopped", detail, case)
+
+
+def _read_eob(case, eob_file, bill, res, storage) -> tuple[dict | None, dict]:
+    """Read the EOB and compare it with the bill. A bad EOB never stops the case: it becomes a flag."""
+    try:
+        e = eob_reader.read(storage.read(eob_file), eob_file.name)
+        main = (res.totals or {}).get("basis") or "service_date"
+        by_line = {d["line_no"]: d["payer_rate"] for d in res.lines.get(main, []) if d.get("payer_rate") is not None}
+        stay_rate = ((res.stay or {}).get("values") or {}).get("payer_rate") if res.stay else None
+        summary, per_line, flags = eob_reader.compare(e, bill, res.payer_group, payer_rate_by_line=by_line, payer_rate_total=stay_rate)
+        summary.update({"file_name": eob_file.name, "sha256": eob_file.sha256})
+        res.flags.extend(flags)
+        return summary, per_line
+    except eob_reader.EobNotReadable as ex:
+        why = str(ex)
+    except ImportError as ex:
+        why = str(ex)
+    except Exception as ex:  # noqa: BLE001
+        log.exception("reading the EOB failed for %s", case.case_number)
+        why = f"{type(ex).__name__}"
+    res.flags.append({"kind": "eob", "severity": "check", "line_no": None, "title": "The EOB could not be read",
+                      "detail": f"Reason: {why[:200]}. The bill is priced without it. Upload a clearer copy (the PDF from the insurer's "
+                                "website reads best), or note the allowed and paid totals in the review note."})
+    return None, {}
 
 
 def process(case, drg_override: str | None = None, user=None) -> None:
@@ -88,16 +112,21 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         res.flags.insert(0, {"kind": "other", "severity": "check", "line_no": None,
                              "title": f"Hospital matched by name: {hosp.name} (CCN {hosp.ccn})",
                              "detail": f"The bill shows “{bill.facility_name}” and no CCN or known NPI. Confirm the match."})
-    if case.files.filter(kind="eob").count() == 0 and res.payer_group != price.SELF_PAY:
+    eob_file = case.files.filter(kind="eob").first()
+    eob_sum, eob_lines = None, {}
+    if eob_file is None and res.payer_group != price.SELF_PAY:
         res.flags.append({"kind": "no_eob", "severity": "info", "line_no": None, "title": "No EOB uploaded",
                           "detail": "With the insurer's EOB, the report can show what was actually allowed and paid."})
+    elif eob_file is not None:
+        eob_sum, eob_lines = _read_eob(case, eob_file, bill, res, storage)
 
     with transaction.atomic():
         kept = {(f.kind, f.line_no, f.title): f for f in case.flags.filter(resolved=True)}
         case.flags.all().delete()
         case.lines.all().delete()
         for basis, lines in res.lines.items():
-            CaseLine.objects.bulk_create([CaseLine(case=case, basis=basis, **{k: v for k, v in d.items() if not k.startswith("_")})
+            CaseLine.objects.bulk_create([CaseLine(case=case, basis=basis, **{k: v for k, v in d.items() if not k.startswith("_")},
+                                                   **eob_lines.get(d["line_no"], {}))
                                           for d in lines])
         for fl in res.flags:
             old = kept.get((fl["kind"], fl["line_no"], fl["title"]))
@@ -119,6 +148,7 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         case.billed_total = bill.lines_total
         case.price_file = res.price_file.as_json() if res.price_file else None
         case.totals = res.totals
+        case.eob = eob_sum
         if res.price_file is None:
             case.status, case.status_detail = case.Status.NO_PRICE_FILE, "No price file loaded for this hospital."
         elif res.totals.get("basis") == "estimate":

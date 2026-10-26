@@ -135,7 +135,7 @@ The reviewer opens **Cases → (case) → Review** and sees:
 | Level | Meaning | Examples |
 |---|---|---|
 | `check` | Must be resolved before approval | Line read with low certainty · lines do not add up to the bill total · payer rate below Medicare · confirm the MS-DRG · hospital matched by name only · price file does not cover the date of service |
-| `info` | For information only | Lines packaged by Medicare · self-pay (no insurer) · no EOB uploaded · some plans pay a % of Medicare |
+| `info` | For information only | Lines packaged by Medicare · self-pay (no insurer) · no EOB uploaded · EOB read · some plans pay a % of Medicare |
 
 The reviewer resolves each `check` flag with a short note. For an inpatient stay, they confirm the DRG or type a different one. **A changed DRG is priced again at once.**
 
@@ -271,6 +271,19 @@ The median and the 10th/90th percentiles use **commercial insurers only**: emplo
 - The **patient's own insurer rate** is not affected: a Medicare Advantage patient still gets their own plan's rate in the insurer line.
 - Example, OSU, MS-DRG 481: 43 posted rates; 16 government plans left out; median of the 27 commercial rates **$61,642.56** (all 43: $42,572.81).
 - Many commercial contracts are a percentage of billed charges; for those the hospital's own dollar estimate is used, which follows its list prices. The report's limits text says so.
+
+### 4.7 The insurer's EOB (`eob.py`)
+
+An EOB (Explanation of Benefits) is the insurer's statement for the claim: per service, what the hospital **billed**, what the insurer **allowed** (its contract amount), what it **paid**, and the **patient's share** (deductible, copay, coinsurance). For a lien, "allowed" is the strongest fact: the insurer's own price for this very claim.
+
+1. **Read.** The same files as bills (text PDF, scan, photo by OCR, Word). The column header line ("Billed  Allowed  Deductible … Plan paid  You owe") says which amount is which, so insurers that print the columns in another order are read too. A "Total" line is used as a check. Header: insurer, plan, claim number, provider, dates of service. **Member name and ID are not stored.**
+2. **Match** each EOB line to a bill line: same date and code (CPT/HCPCS, else revenue code), then same charge. An inpatient EOB that shows the stay as one line (`DRG 481`) is compared by its totals only.
+3. **Store:** `Case.eob` (totals and claim facts) and `eob_allowed`, `eob_paid`, `eob_patient` on each matched line.
+4. **Report:** two rows after "Billed": *Allowed by &lt;insurer&gt; for this claim (EOB)* and *Paid by &lt;insurer&gt; (EOB)*, a sentence in the summary, an "Allowed (EOB)" column, the EOB in the sources, and EOB values in the CSV.
+5. **Flags** (reviewer): EOB read (info) · read by OCR · lines that do not add up to the EOB's own total · EOB billed total differs from the bill · EOB from another insurer · dates that do not overlap · a different MS-DRG · bill lines not on the EOB, EOB lines not on the bill · lines allowed at $0 (info) · allowed 10 % or more away from the hospital's posted rate on the same lines (info).
+6. **A bad EOB never stops the case.** If it cannot be read (or is not an EOB), the bill is priced anyway and a check flag gives the reason.
+
+Test EOBs: `tests\fixtures\test_eobs\` (Anthem line by line, Medical Mutual with another column order, UnitedHealthcare inpatient by DRG), made by `python tests\fixtures\make_test_eobs.py`. Real EOB layouts will need tuning of `COLUMNS` and `LINE_RX` in `eob.py`, the same way as bills.
 
 ---
 
@@ -613,7 +626,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 |---|---|---|
 | Scanned bills and photos | Read by local OCR (RapidOCR); every OCR bill is checked by a reviewer | Test with real scans as they arrive; tune `LOOSE_RX` in `reader.py` for new layouts |
 | New bill layouts | The reader knows line lists in the order date, revenue code, code, units, description, charge | Add patterns in `reader.py` (`LINE_RX`) as real bills arrive. Test each one with `try_bill`. |
-| EOBs | Stored, not read | Read the allowed and paid amounts into the report |
+| EOBs | Read for the 3 test layouts (section 4.7) | Test with real EOBs (no PHI in Git) and add their column names to `COLUMNS` in `eob.py` |
 | Only 2 hospitals have price files | Other hospitals go to `no_price_file` | Load Miami Valley (JSON) and Cleveland Clinic, then the other Ohio hospitals |
 | 2024–2025 price-file history | No free complete source | Use the estimate basis; archived files must be labeled as not official |
 | Inpatient Medicare | IPPS estimate without outliers or transfers | Add outlier logic and the CMS grouper if needed |

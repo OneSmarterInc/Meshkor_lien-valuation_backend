@@ -134,9 +134,18 @@ Case summary plus:
      "title": "4 lines have no separate Medicare payment",
      "detail": "Lines 5, 9, 10, 11 are packaged into other payments.", "resolved": false}
   ],
-  "stay": null
+  "stay": null,
+  "eob": null   /* when an EOB was read: {"payer": "Anthem Blue Cross and Blue Shield", "plan": "…", "payer_group": "Anthem",
+                   "claim_number": "…", "provider": "…", "date_from": "2026-08-14", "date_to": "2026-08-14", "ms_drg": null,
+                   "level": "line" | "stay", "columns": ["billed", "allowed", …], "method": "text" | "ocr" | "docx",
+                   "totals": {"billed": 9647.87, "discount": null, "allowed": 3501.80, "not_covered": null, "deductible": 500.0,
+                              "copay": 0.0, "coinsurance": 600.36, "paid": 2401.44, "patient": 1100.36},
+                   "lines": 11, "lines_matched": 11, "bill_lines": 11,
+                   "vs_price_file": {"allowed": 2382.0, "posted": 2472.36, "pct": -4},   (same lines; may be missing)
+                   "file_name": "…", "sha256": "…"} */
 }
 ```
+`eob` is `null` when no EOB was uploaded or it could not be read (then a flag of kind `eob` says why). Flag kinds include `eob`.
 `hospital_match` is `null` when no match was found. `totals.cash` is `null` when the hospital posts no cash price.
 
 Flag `kind` values: `low_confidence`, `no_rate`, `no_price_file`, `estimate`, `packaged`, `no_eob`, `drg_check`, `other`. `severity`: `check` (reviewer must act) or `info`.
@@ -169,6 +178,7 @@ For an inpatient case, `stay` is:
   "median": 1388.00, "p10": 1120.00, "p90": 1690.00, "cash": null,
   "medicare": 598.40, "medicare_status": "priced", "medicare_source": "OPPS 2026Q3, wage-adjusted",
   "cost": 714.63,
+  "eob_allowed": 1450.00, "eob_paid": 760.00, "eob_patient": 690.00,   /* null when the line is not on the EOB */
   "status": "priced",
   "sources": [{"label": "Hospital price file", "file_name": "31-1340739_…csv", "sha256": "…"}]
 }]
@@ -191,6 +201,8 @@ The report as data, for the on-screen preview (the PDF is built from the same da
   "generated_at": "2026-10-23T09:41:00+05:30",
   "summary": [
     {"key": "billed",     "benchmark": "Billed charges",                    "total": 9647.87, "pct_of_billed": 100, "coverage_pct": 100, "note": ""},
+    {"key": "eob_allowed", "benchmark": "Allowed by Anthem … for this claim (EOB)", "total": 3501.80, "pct_of_billed": 36, "coverage_pct": 100, "note": "…"},   /* only with an EOB */
+    {"key": "eob_paid",   "benchmark": "Paid by Anthem … (EOB)",            "total": 2401.44, "pct_of_billed": 25,  "coverage_pct": 100, "note": "plus the patient's share …"},
     {"key": "payer_rate", "benchmark": "Hospital's own rate with Anthem",   "total": 2472.36, "pct_of_billed": 42,  "coverage_pct": 61,
                           "note": "4 of 11 lines, 61 % of billed charges; the % compares those lines only"},
     {"key": "median",     "benchmark": "Median of the hospital's commercial insurer rates", "total": 2396.76, "pct_of_billed": 40,  "coverage_pct": 61, "note": "…"},
@@ -202,6 +214,7 @@ The report as data, for the on-screen preview (the PDF is built from the same da
   "summary_text": "The hospital billed $9,647.87. …",
   "stay": null,   /* inpatient: {"ms_drg": "481", "drg_title": "…", "drg_source": "bill", "drg_confirmed": false, "los_days": 3,
                      "medicare_source": "IPPS FY2026 …", "payer_rate_is_estimate": false, "p10": 22400.0, "p90": 25600.0} */
+  "eob": null,   /* or the case's eob object without file_name, sha256, columns and method */
   "lines": [ /* same objects as GET /lines/ */ ],
   "sources": [{"data": "Hospital price file", "file_name": "…", "dated": "2026-07-01", "sha256": "…"}],
   "method": "Each billed line is matched …",
