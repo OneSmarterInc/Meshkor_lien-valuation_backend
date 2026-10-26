@@ -184,6 +184,7 @@ The code is in `pipeline/lien/`. `backend/cases/processing.py` is the **only** p
 - **From each line:** `[line no] date  revenue code  [HCPCS/CPT] [modifiers]  units  description  charge`. A description that wraps onto the next line is joined back.
 - Each line gets a **confidence**. It is lower when a line number is skipped or a value looks odd, and anything under 90 % becomes a `check` flag.
 - **Inpatient** means a type of bill of 011x or 012x, or an MS-DRG on the bill.
+- **Diagnoses:** ICD-10-CM codes on lines labelled "Diagnosis", "Dx" or "ICD-10", anywhere on the bill (a UB-04 lists them below the lines). The principal diagnosis comes first; admitting diagnoses are skipped. Each code gets its name and level from the CMS MS-DRG tables in force on the date of service (`ref_msdrg_dx`, `ref_msdrg_cc`): principal, MCC, CC or other. The DRG flag lists the MCC and CC codes, so the reviewer can see why a stay is "with MCC" or "with CC". CMS's exclusions for the principal diagnosis are not checked yet (the CMS grouper, or I/OCE for outpatient, is the planned next step).
 - **OCR rules:** a line's certainty is at most the OCR certainty of its text, and never above 95 %. When OCR misses a value (often a thin "1" in the Units column, sometimes a revenue code or the description), the line is still read, the missing value gets a safe default (1 unit), its certainty drops to 85 %, and a note names what was missing. Every OCR bill gets a **check** flag, "Bill read from a scan or photo by OCR: compare the lines with the bill". The check that the lines add up to the bill total still runs.
 - **The OCR engine:** RapidOCR (PP-OCR models on ONNX Runtime). It is free (Apache-2.0 licence) and runs **on this computer**: the bill is never sent anywhere. On first use it downloads its 3 model files (about 32 MB) once; after that it works offline. Speed: about 5 seconds per page. Tested on the 10 synthetic bills as clean scans and as tilted, blurred phone photos: **143 of 146 lines and 80 of 80 header fields exact**, and the 3 misses were all flagged. Tesseract, the other free engine, read 71 of 146 lines on the same images.
 - A file that cannot be read at all (too blurred, an unknown layout) goes to `error`, with the reason.
@@ -543,7 +544,7 @@ All of these run from the repository root, with `.venv` active.
 
 ## 11. Tests
 
-**Portal and pricing tests (34):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+**Portal and pricing tests (36):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
 
 ```powershell
 $env:DB_ENGINE="sqlite"
@@ -598,7 +599,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 - PDF and CSV report
 - Email when a report is ready
 - Audit log and data-sources page
-- 34 portal tests and 59 pipeline tests
+- 36 portal tests and 59 pipeline tests
 
 **Known limits:**
 

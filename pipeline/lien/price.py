@@ -194,6 +194,26 @@ class Ref:
                 return r[0]["t"]
         return ""
 
+    def diagnoses(self, codes: list[str], dos: date | None) -> list[dict]:
+        """Name and level of each diagnosis on the date of service, from the CMS MS-DRG definitions:
+        the first is the principal; a secondary one is an MCC or CC (appendix C) or "other"."""
+        out = []
+        for i, code in enumerate(codes):
+            name, level = "", "principal" if i == 0 else "other"
+            if dos and "ref_msdrg_dx" in self.have:
+                r = self.q("""SELECT any_value(description) AS d FROM ref_msdrg_dx
+                              WHERE icd10 = ? AND ? BETWEEN effective_start AND effective_end""", [code, dos])
+                name = (r[0]["d"] if r else "") or ""
+            if dos and "ref_msdrg_cc" in self.have:
+                r = self.q("""SELECT cc_level, description FROM ref_msdrg_cc
+                              WHERE icd10 = ? AND ? BETWEEN effective_start AND effective_end LIMIT 1""", [code, dos])
+                if r:
+                    name = name or (r[0]["description"] or "")
+                    if i > 0 and r[0]["cc_level"] in ("CC", "MCC"):
+                        level = r[0]["cc_level"].lower()
+            out.append({"code": code, "description": name or "Not found in the MS-DRG code list for this date", "level": level})
+        return out
+
     def ipps(self, drg: str, dos: date) -> dict | None:
         if "ipps_payment" not in self.have:
             return None
@@ -514,8 +534,7 @@ def price_inpatient(ref: Ref, bill: Bill, group: str, pf: PriceFile | None, ccr,
               "medicare": None, "cost": round(billed * ccr, 2) if ccr is not None else None, "payer_rate_is_estimate": False}
     stay = {"ms_drg": drg, "drg_title": ref.drg_title(drg, dos) if (drg and dos) else "", "drg_source": "bill",
             "los_days": (bill.date_to - bill.date_from).days if (bill.date_from and bill.date_to) else None,
-            "diagnoses": [{"code": c, "description": "", "level": "principal" if i == 0 else "secondary"}
-                          for i, c in enumerate(bill.diagnoses)], "sources": []}
+            "diagnoses": ref.diagnoses(bill.diagnoses, dos), "sources": []}
     if drg and dos:
         m = ref.ipps(drg, dos)
         if m:
@@ -609,8 +628,15 @@ def flags(bill: Bill, res: Priced, group: str, in_force, nearest, ccr, main: str
         if not st.get("ms_drg"):
             add("drg_check", "check", "Inpatient bill without an MS-DRG", "Enter the MS-DRG from the UB-04 (box 71) or the grouper.")
         else:
+            dx = st.get("diagnoses") or []
+            mcc = [d["code"] for d in dx if d["level"] == "mcc"]
+            cc = [d["code"] for d in dx if d["level"] == "cc"]
+            dx_note = (f" The bill lists {len(dx)} diagnosis code(s)"
+                       + (f"; MCC: {', '.join(mcc)}" if mcc else "") + (f"; CC: {', '.join(cc)}" if cc else "")
+                       + ". A \"with MCC\" or \"with CC\" DRG needs such a secondary diagnosis (CMS's exclusions for the principal"
+                       " diagnosis are not checked here)." if dx else " The bill lists no diagnosis codes.")
             add("drg_check", "check", f"Confirm MS-DRG {st['ms_drg']} {st.get('drg_title') or ''}".strip(),
-                "The whole stay is valued as this DRG. Check it against the diagnoses and procedures.")
+                "The whole stay is valued as this DRG. Check it against the diagnoses and procedures." + dx_note)
         if st.get("values", {}).get("payer_rate") is None and group not in (SELF_PAY, "Other") and (in_force or nearest):
             add("no_rate", "check", f"No {group} rate posted for this DRG", "The hospital's file has no rate for this payer and DRG.")
         return f

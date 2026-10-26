@@ -104,6 +104,16 @@ def build(root: Path) -> Path:
     for drg, title, w in (("481", "HIP AND FEMUR PROCEDURES EXCEPT MAJOR JOINT WITH CC", 2.0),
                           ("480", "HIP AND FEMUR PROCEDURES EXCEPT MAJOR JOINT WITH MCC", 3.0)):
         x("INSERT INTO ref_ipps_drg VALUES (?, ?, ?, 'FY2026', DATE '2025-10-01', DATE '2026-09-30', 'ipps/table5.txt', ?, 'FY2026')", [drg, title, w, SHA])
+    x("""CREATE TABLE ref_msdrg_dx (icd10 VARCHAR, mdc VARCHAR, drg_from VARCHAR, drg_to VARCHAR, description VARCHAR,
+         effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
+    x("""CREATE TABLE ref_msdrg_cc (icd10 VARCHAR, cc_level VARCHAR, hac VARCHAR, pdx_exclusion_group VARCHAR, pdx_exclusion_count INTEGER,
+         description VARCHAR, cc_only_if_alive BOOLEAN, effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
+    for code, desc in (("S72301A", "Unspecified fracture of shaft of right femur, initial encounter for closed fracture"),
+                       ("E1165", "Type 2 diabetes mellitus with hyperglycemia"), ("D62", "Acute posthemorrhagic anemia")):
+        x("INSERT INTO ref_msdrg_dx VALUES (?, '08', '480', '482', ?, DATE '2025-10-01', DATE '2026-09-30', 'MSDRG/V43.1/appendix_B.txt', ?, 'V43.1')", [code, desc, SHA])
+    for code, lev, desc in (("E1165", "CC", "Type 2 diabetes mellitus with hyperglycemia"), ("D62", "CC", "Acute posthemorrhagic anemia"),
+                            ("J9601", "MCC", "Acute respiratory failure with hypoxia")):
+        x("INSERT INTO ref_msdrg_cc VALUES (?, ?, NULL, '0001', 1, ?, false, DATE '2025-10-01', DATE '2026-09-30', 'MSDRG/V43.1/appendix_C.txt', ?, 'V43.1')", [code, lev, desc, SHA])
     x("""CREATE TABLE ref_hcris (ccn VARCHAR, fy_end DATE, cost_to_charge_ratio DOUBLE, is_primary BOOLEAN,
          source_file VARCHAR, source_sha256 VARCHAR)""")
     x("INSERT INTO ref_hcris VALUES ('360085', DATE '2024-06-30', ?, true, 'hcris/HOSP10FY2024.zip', ?)", [CCR, SHA])

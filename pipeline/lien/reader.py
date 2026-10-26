@@ -197,10 +197,31 @@ def parse_header(lines: list[str], bill: Bill) -> None:
             m = re.search(rf"{LABELS['dates']}[:#]?\s+{DATE}(?:\s*(?:to|-|through|thru)\s*{DATE})?", ln, re.I)
             if m:
                 bill.date_from, bill.date_to = _date(m.group(1)), _date(m.group(2) or m.group(1))
-        for code in re.findall(r"\b(?:Dx|Diagnosis|ICD-10)[^:]*:\s*([A-Z]\d{2}\.?[0-9A-Z]{0,4})", ln, re.I):
-            bill.diagnoses.append(code.replace(".", "").upper())
     if bill.facility_name.startswith("("):
         bill.facility_name = ""
+
+
+DX_LABEL = re.compile(r"\b(?P<kind>principal|primary|other|secondary|additional)?\s*(?:diagnos[ie]s|dx|icd-?10(?:-cm)?(?: codes?)?)\b(?P<rest>.*)$", re.I)
+ICD10 = re.compile(r"\b([A-TV-Z]\d[0-9A-Z])(?:\.?([0-9A-Z]{1,4}))?\b")
+
+
+def parse_diagnoses(lines: list[str], bill: Bill) -> None:
+    """ICD-10-CM codes from lines labelled Diagnosis / Dx / ICD-10 (anywhere on the bill: a UB-04 lists
+    them below the lines, box 67). The principal diagnosis comes first; "admitting" diagnoses are skipped."""
+    principal, others = [], []
+    for ln in lines:
+        if re.search(r"\badmitting\b", ln, re.I) or LINE_RX.match(ln):
+            continue
+        m = DX_LABEL.search(ln)
+        if not m:
+            continue
+        codes = [(a + (b or "")).upper() for a, b in ICD10.findall(m.group("rest"))]
+        (principal if (m.group("kind") or "").lower() in ("principal", "primary") else others).extend(codes)
+    seen = []
+    for c in principal + others:
+        if c not in seen:
+            seen.append(c)
+    bill.diagnoses = seen
 
 
 def parse_lines(lines: list[str], bill: Bill) -> None:
@@ -260,6 +281,7 @@ def parse_lines(lines: list[str], bill: Bill) -> None:
 def _finish(bill: Bill, lines: list[str], scores: list[float] | None = None) -> Bill:
     parse_header(lines, bill)
     parse_lines(lines, bill)
+    parse_diagnoses(lines, bill)
     if not bill.lines:
         raise BillNotReadable("No bill lines were found. The layout is not one the reader knows yet."
                               + (" The picture may be too blurred or too small; upload a sharper photo or the PDF from the hospital."

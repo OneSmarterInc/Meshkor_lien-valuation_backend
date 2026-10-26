@@ -155,7 +155,7 @@ For an inpatient case, `stay` is:
              "medicare": 21740.00, "cost": 12308.52}
 }
 ```
-`drg_source`: `bill`, `grouper`, or `reviewer` (a reviewer typed a different DRG in confirm). `level`: `principal`, `secondary`, `mcc`, `cc`, `other`.
+`drg_source`: `bill`, `grouper`, or `reviewer` (a reviewer typed a different DRG in confirm). `level`: `principal`, `mcc`, `cc` or `other` (from the CMS MS-DRG CC/MCC list on the date of service); `description` is the CMS name of the code.
 
 ### `GET /api/cases/{id}/lines/?basis=service_date|estimate`
 `service_date` (default) = rates in force on the date of service. `estimate` = hospital's current payer ÷ Medicare ratio × Medicare on the date of service.

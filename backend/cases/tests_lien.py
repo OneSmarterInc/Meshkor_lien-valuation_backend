@@ -203,6 +203,23 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertIn("multiple procedure discount", L["11042"]["medicare_source"])
         self.assertEqual(L["99285"]["medicare"], Decimal(str(T.opps_adjusted(600))))                    # status V: no discount
 
+    def test_diagnoses_are_read_and_named(self):
+        b = reader.Bill()
+        reader.parse_diagnoses(["Admitting diagnosis: R51.9",
+                                "Other diagnoses: E11.65, D62, J96.01",
+                                "Principal diagnosis: S72.301A",
+                                "1 2026-07-12 0450 99285 1 HC EMERGENCY ROOM LEVEL 5 $3,403.00"], b)
+        self.assertEqual(b.diagnoses, ["S72301A", "E1165", "D62", "J9601"])      # principal first, admitting skipped
+        b8 = reader.read(bill("B08"), "b.pdf")
+        b8.diagnoses = b.diagnoses
+        r = self._price(b8)
+        dx = {d["code"]: d for d in r.stay["diagnoses"]}
+        self.assertEqual(dx["S72301A"]["level"], "principal")
+        self.assertTrue(dx["S72301A"]["description"].startswith("Unspecified fracture of shaft of right femur"))
+        self.assertEqual((dx["E1165"]["level"], dx["D62"]["level"], dx["J9601"]["level"]), ("cc", "cc", "mcc"))
+        drg = next(f for f in r.flags if f["kind"] == "drg_check")
+        self.assertIn("MCC: J9601", drg["detail"]); self.assertIn("CC: E1165, D62", drg["detail"])
+
     def test_inpatient_stay_priced_as_one_drg(self):
         b = reader.read(bill("B08"), "b.pdf")
         con = db.connect()
