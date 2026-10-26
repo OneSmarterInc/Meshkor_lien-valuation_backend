@@ -147,3 +147,6 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ("outcome", "price_per_report", "pricing_model", "comment")
+
+    def validate_pricing_model(self, v):
+        return v or ""          # the field is not nullable; "not answered" is stored as empty

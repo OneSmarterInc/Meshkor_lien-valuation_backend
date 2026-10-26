@@ -9,7 +9,6 @@ Ends in one of:
 from __future__ import annotations
 
 import logging
-import traceback
 
 from django.db import transaction
 from django.utils import timezone
@@ -65,9 +64,9 @@ def process(case, drg_override: str | None = None, user=None) -> None:
             return _fail(case, f"Hospital not found (name “{bill.facility_name or '—'}”, CCN {bill.ccn or '—'}, "
                                f"NPI {bill.npi or '—'}). Add the CCN on the bill or in config/ccn_npi_manual.csv.", user)
         res = price.price(con, bill, hosp.ccn, bill.payer)
-    except Exception as e:  # noqa: BLE001 — record every failure on the case
+    except Exception as e:  # noqa: BLE001 — record every failure on the case; the traceback goes to the log only
         log.exception("pricing failed for %s", case.case_number)
-        return _fail(case, f"Pricing failed: {type(e).__name__}: {e}\n{traceback.format_exc(limit=3)}", user)
+        return _fail(case, f"Pricing failed: {type(e).__name__}: {str(e)[:300]}. See the server log.", user)
     finally:
         con.close()
 
@@ -108,6 +107,8 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         case.totals = res.totals
         if res.price_file is None:
             case.status, case.status_detail = case.Status.NO_PRICE_FILE, "No price file loaded for this hospital."
+        elif res.totals.get("basis") == "estimate":
+            case.status, case.status_detail = case.Status.NEEDS_REVIEW, "Price file does not cover the service date: insurer rate, median and cash are estimates."
         else:
             case.status, case.status_detail = case.Status.NEEDS_REVIEW, ""
         case.updated_at = timezone.now()

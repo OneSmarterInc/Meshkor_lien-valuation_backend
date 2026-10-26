@@ -26,6 +26,7 @@ MRF = [
     ("70450", None, "Both", "Anthem", "Anthem", "Anthem PPO", None, 40.0, None),           # percentage only
     ("70450", None, "Both", "Aetna", "Aetna", "Aetna Open", 700.0, None, None),
     ("70450", None, "Both", "UnitedHealthcare", "UHC", "UHC Choice", 800.0, None, None),
+    ("70450", None, "Both", "Cigna", "Cigna", "Cigna OAP", 0.62, None, None),           # a factor in the dollar column
     ("85025", None, "Both", "Anthem", "Anthem", "Anthem PPO", 20.0, None, 15.0),
     # OSU style: "fee schedule" row whose dollar column holds a factor; the real term is in the notes
     ("71046", None, "Outpatient", "Anthem", "Anthem", "Anthem - Blue Access", 2.18, None, None, "226.10% of Medicare"),
@@ -60,11 +61,11 @@ def build(root: Path) -> Path:
          source_layout VARCHAR, effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
     for code, drg, setting, grp, payer, plan, dollar, pct, cash, *notes in MRF:
         x("""INSERT INTO ref_hospital_mrf (ccn, hospital_name, type2_npis, last_updated_on, setting, payer_group, payer_name,
-             plan_name, negotiated_dollar, negotiated_percentage, discounted_cash, hcpcs, ms_drg, notes, source_layout,
+             plan_name, negotiated_dollar, negotiated_percentage, discounted_cash, hcpcs, ms_drg, notes, gross_charge, source_layout,
              effective_start, effective_end, source_file, source_sha256, period)
-             VALUES ('360085', 'Ohio State University Hospitals', '1447359997|1831389550', DATE '2026-07-01', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             VALUES ('360085', 'Ohio State University Hospitals', '1447359997|1831389550', DATE '2026-07-01', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                      'tall', DATE '2026-07-01', DATE '9999-12-31', ?, ?, '2026-10')""",
-          [setting, grp, payer, plan, dollar, pct, cash, code, drg, notes[0] if notes else None, MRF_FILE, SHA])
+          [setting, grp, payer, plan, dollar, pct, cash, code, drg, notes[0] if notes else None, 2064.0 if code == "70450" else None, MRF_FILE, SHA])
     x("""CREATE TABLE ref_opps (hcpcs VARCHAR, description VARCHAR, status_indicator VARCHAR, apc VARCHAR, relative_weight DOUBLE,
          payment_rate_national DOUBLE, national_unadjusted_copay DOUBLE, minimum_unadjusted_copay DOUBLE, source_file VARCHAR,
          source_sha256 VARCHAR, effective_start DATE, effective_end DATE, period VARCHAR)""")

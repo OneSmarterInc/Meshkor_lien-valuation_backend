@@ -133,6 +133,23 @@ CORS_ALLOW_HEADERS = ["accept", "authorization", "content-type", "x-requested-wi
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+# Behind HTTPS (production). DJANGO_SECURE=1 turns on the browser protections; the reverse proxy
+# (nginx, IIS) terminates TLS and sends X-Forwarded-Proto.
+if os.environ.get("DJANGO_SECURE", "0") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+if SECRET_KEY == "dev-only-change-me" and "test" not in sys.argv:
+    if os.environ.get("DJANGO_SECURE", "0") == "1":
+        raise RuntimeError("DJANGO_SECRET_KEY is not set. Put a 50+ character random value in .env.")
+    import warnings
+    warnings.warn("DJANGO_SECRET_KEY is not set: sign-in tokens are signed with a public default. Set it in .env.")
+
 # Bills and EOBs (PHI): encrypted, outside the repo. Make a key once:
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 MESHKOR_UPLOAD_DIR = os.environ.get("MESHKOR_UPLOAD_DIR", str(Path(MESHKOR_DATA_ROOT) / "uploads"))

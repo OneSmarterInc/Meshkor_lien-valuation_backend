@@ -89,7 +89,7 @@ DATE = r"(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})"
 MONEY = r"\(?-?\$?\s?-?[\d,]+\.\d{2}\)?"
 LINE_RX = re.compile(
     rf"^(?:(?P<no>\d{{1,4}})\s+)?(?P<date>{DATE})\s+(?P<rev>\d{{3,4}})\s+"
-    rf"(?:(?P<code>[A-Z]?\d{{4}}[A-Z0-9]?|\d{{5}})(?:[\s-]+(?P<mods>(?:[A-Z0-9]{{2}}\s?){{1,4}}))?\s+)?"
+    rf"(?:(?P<code>[A-Z]\d{{4}}|\d{{4}}[A-Z0-9])(?:[\s-]+(?P<mods>(?:[A-Z0-9]{{2}}\s?){{1,4}}))?\s+)?"
     rf"(?P<units>\d{{1,5}}(?:\.\d{{1,2}})?)\s+(?P<desc>.+?)\s+(?P<charge>{MONEY})$")
 TOTAL_RX = re.compile(rf"^(?:TOTAL CHARGES|TOTAL BILLED|TOTAL|GRAND TOTAL|TOTALS)\b[:\s]*(?P<amt>{MONEY})$", re.I)
 HEADER_RX = re.compile(r"^#?\s*(?:line\s+)?date\b.*\b(rev|revenue)\b", re.I)

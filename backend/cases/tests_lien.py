@@ -65,6 +65,10 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(er["cost"], Decimal("714.63"))                 # 3403 x 0.21
         ct = r.lines["service_date"][1]
         self.assertTrue(ct["payer_rate_is_estimate"]); self.assertEqual(ct["payer_rate"], Decimal("825.60"))   # 40 % of 2064
+        self.assertEqual(ct["median"], Decimal("750.00"))                 # Cigna's 0.62 "dollar" row is a factor: left out
+        self.assertFalse(price.is_multiplier({"negotiated_dollar": 3.0, "gross_charge": 60.0}, 3.0))   # a real cheap price (venipuncture)
+        self.assertTrue(price.is_multiplier({"negotiated_dollar": 0.62, "gross_charge": 3403.0}, 586.78))
+        self.assertIn("Factors posted as dollars", " ".join(f["title"] for f in r.flags))
         lab = r.lines["service_date"][5]
         self.assertEqual((lab["medicare"], lab["medicare_source"]), (Decimal("7.50"), "CLFS 2026Q3"))
         self.assertEqual(lab["cash"], Decimal("15.00"))
@@ -86,6 +90,10 @@ class ReaderAndPriceTests(SimpleTestCase):
         r = price.price(con, b, "360085", b.payer)
         con.close()
         lines = r.lines["service_date"]
+        # anesthesia, recovery room, implant: no code, paid inside the J1 payment -> $0 and counted as covered
+        self.assertEqual([(l["medicare"], l["medicare_status"]) for l in lines[1:4]], [(Decimal("0.00"), "packaged")] * 3)
+        self.assertEqual(r.totals["coverage"]["medicare"], 100)
+        self.assertEqual(r.totals["coverage"]["medicare_billed"], 27671.34)
         self.assertEqual(lines[0]["medicare"], Decimal(str(T.opps_adjusted(6800))))
         self.assertEqual(lines[4]["medicare_status"], "packaged")           # splint 29125 rides on the J1 line
         self.assertEqual(r.totals["medicare"], T.opps_adjusted(6800))
@@ -117,6 +125,26 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(r.lines["estimate"][0]["payer_rate"], Decimal("1450.00"))
         self.assertTrue(r.lines["estimate"][0]["payer_rate_is_estimate"])
         self.assertIn("estimate", {f["kind"] for f in r.flags})
+        self.assertEqual(r.totals["basis"], "estimate")                    # the report uses the nearest file ...
+        self.assertEqual(r.totals["payer_rate"], 1450.0 + 825.6 + 200.0 + 20.0)   # no OPPS rate in March, so no %-of-Medicare value
+        self.assertTrue(r.totals["payer_rate_is_estimate"])                 # ... and says every value is an estimate
+        self.assertNotIn("Line 1", " ".join(f["title"] for f in r.flags if f["kind"] == "no_rate"))
+
+    def test_unknown_insurer_gets_no_rate_and_a_reversal_line_subtracts(self):
+        b = reader.read(bill("B01"), "b.pdf")
+        con = db.connect()
+        r = price.price(con, b, "360085", "XYZ Benefit Trust")
+        self.assertEqual(r.payer_group, "Other")
+        self.assertTrue(all(l["payer_rate"] is None for l in r.lines["service_date"]))   # never another plan's rate
+        self.assertIn("not in the payer list", " ".join(f["title"] for f in r.flags))
+        import copy
+        b2 = copy.deepcopy(b)
+        rev = copy.deepcopy(b2.lines[0]); rev.line_no = 12; rev.charge = -rev.charge; b2.lines.append(rev)
+        r2 = price.price(con, b2, "360085", "Anthem")
+        con.close()
+        self.assertEqual(r2.lines["service_date"][11]["payer_rate"], Decimal("-1450.00"))
+        self.assertEqual(r2.totals["payer_rate"], r.totals["billed"] and round(825.6 + 176.76 + 20.0, 2))
+        self.assertEqual(r2.totals["billed"], round(9647.87 - 3403, 2))
 
     def test_price_file_without_payer_group_column(self):
         # Files loaded with the first load_mrf.py have no payer_group: it is worked out from payer and plan names.
@@ -174,12 +202,24 @@ class IntakeApiTests(APITestCase):
         self.assertEqual(len(lines), 11); self.assertEqual(lines[0]["payer_rate"], 1450.0)
         self.assertEqual(lines[0]["sources"][0]["label"], "Medicare cost report, year ending 2024-06-30")
         rep = self.client.get(f"/api/cases/{cid}/report/").data
-        self.assertIn("lines =", rep["summary"][1]["benchmark"])          # payer total covers only part of the bill
-        self.assertEqual(self.client.get(f"/api/cases/{cid}/report.pdf").status_code, 200)
+        pr = rep["summary"][1]
+        self.assertEqual(pr["key"], "payer_rate")
+        cov = Case.objects.get(pk=cid).totals["coverage"]
+        self.assertLess(cov["payer_rate"], 100)                           # the Anthem total leaves out some lines ...
+        self.assertEqual(pr["pct_of_billed"], round(100 * pr["total"] / cov["payer_rate_billed"]))   # ... so its % uses those lines only
+        self.assertIn("lines", pr["note"])
+        self.assertIn(f"{pr['pct_of_billed']} % of the billed charges on those", rep["summary_text"])  # text and table agree
+        self.assertTrue(all(r["key"] != "cash" or r["pct_of_billed"] is None for r in rep["summary"]))  # cash on 1 line: not compared
+        pdf = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertEqual(pdf.status_code, 200); self.assertEqual(pdf.content[:4], b"%PDF")
 
     def test_inpatient_upload_and_drg_change_reprices(self):
         cid = self.upload("B08").data["id"]
         det = self.client.get(f"/api/cases/{cid}/").data
+        rep = self.client.get(f"/api/cases/{cid}/report/").data
+        self.assertEqual(rep["stay"]["ms_drg"], "481"); self.assertIn("MS-DRG 481", rep["summary_text"])
+        self.assertTrue(any(s["data"].startswith("Medicare IPPS") for s in rep["sources"]))
+        self.assertEqual(rep["summary"][1]["pct_of_billed"], round(100 * 22000 / 58612))
         self.assertEqual(det["setting"], "inpatient"); self.assertEqual(det["stay"]["ms_drg"], "481")
         self.assertEqual(det["stay"]["values"]["medicare"], T.ipps_total(2.0))
         r = self.client.post(f"/api/cases/{cid}/drg/confirm/", {"ms_drg": "480"}, format="json")
@@ -191,6 +231,8 @@ class IntakeApiTests(APITestCase):
     def test_hospital_without_price_file(self):
         r = self.upload("B10")
         self.assertEqual(r.data["status"], "no_price_file")
+        rep = self.client.get(f"/api/cases/{r.data['id']}/report/").data
+        self.assertEqual(rep["summary"][1]["benchmark"], "No insurer on the bill")   # self-pay, no made-up insurer name
         lines = self.client.get(f"/api/cases/{r.data['id']}/lines/").data
         self.assertEqual(lines[0]["medicare"], 110.0)                       # national OPPS: James has no IPPS wage index
 

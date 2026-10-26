@@ -209,6 +209,9 @@ The pricing step picks **the hospital's price file in force on the date of servi
 | A percentage of billed charges | % × this line's charge. Marked **estimate (\*)**. |
 | "N % of Medicare" in the notes (OSU writes it this way) | N % × the Medicare rate of this line. The dollar column on that row is ignored, because it holds a factor, not a price. Marked **estimate (\*)**. |
 | An estimated amount only | That amount. Marked **estimate (\*)**. |
+| A "dollar" rate under $5 on a charge of $50 or more, and under half the Medicare rate | A factor the hospital put in the dollar column (OSU posts Cigna 0.62 this way). It is left out of the median and the insurer rate, and a flag counts the rows. |
+| An insurer that is not in `config/payer_groups.yaml` | **No insurer rate** (never another plan's rate), and a check flag asks staff to add the name. |
+| A reversal line (negative charge) | Its rates are subtracted, like its charge. |
 
 **Inpatient: the whole stay is one MS-DRG**
 
@@ -227,12 +230,13 @@ If the hospital has a price file, but it starts after the date of service, the l
 - **basis = `service_date`:** only the values that exist for that date (Medicare, cost).
 - **basis = `estimate`:** the insurer rate and the median from the nearest file, all marked as estimates.
 
-The reviewer can switch between the two on the Review page, and a flag explains why.
+The totals, the report, the PDF and the CSV then use the **estimate** basis (`totals.basis = "estimate"`), with every insurer value marked as an estimate and the limits text saying so. The reviewer can switch between the two on the Review page, and a flag explains why.
 
 ### 4.5 Totals and coverage
 
 - A total adds up **only the lines that have a value**.
-- `totals.coverage` gives the share of billed charges those lines cover. When it is under 100 %, the report says so next to the benchmark (for example "lines = 58 % of billed"). The "% of billed" is then compared with the billed amount of the same lines only, so the comparison stays fair.
+- `totals.coverage` gives the billed dollars and the share of the bill those lines cover. When it is under 100 %, the report's "% of billed" compares the total with the billed charges of the **same lines**, and a note under the benchmark says so ("4 of 11 lines, 61 % of billed charges; the % compares those lines only"). A benchmark on less than half of the billed charges (for example a cash price posted on one lab line) is listed without a percentage, marked "not comparable with the bill". The summary sentence, the table, the PDF and the screen all use this same rule.
+- A law firm user sees the values, lines and report **only after release**. Before that, the case shows progress only.
 
 ### 4.6 Open decision: which payers count in the median
 
@@ -434,6 +438,7 @@ python backend\manage.py verify_step1          # expect 0 fail in data\reports\v
 | `DJANGO_SECRET_KEY` | dev value | **Must be set (50+ characters).** Signs the login tokens. |
 | `DJANGO_DEBUG` | `0` | `1` on a developer PC only |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Host names the server answers to |
+| `DJANGO_SECURE` | `0` | `1` on a server behind HTTPS: secure cookies, HSTS, HTTPS redirect, and a hard stop if `DJANGO_SECRET_KEY` is missing |
 | `MESHKOR_FILE_KEY` | – | **Must be set.** Fernet key that encrypts bills and EOBs. Back it up. |
 | `MESHKOR_DATA_ROOT` | `<repo>/data` | Where Parquet, DuckDB and reports live |
 | `MESHKOR_UPLOAD_DIR` | `<data>/uploads` | Where the encrypted bills live. Keep it outside the repository on a server. |
@@ -512,7 +517,7 @@ All of these run from the repository root, with `.venv` active.
 
 ## 11. Tests
 
-**Portal and pricing tests (18):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+**Portal and pricing tests (19):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
 
 ```powershell
 $env:DB_ENGINE="sqlite"
@@ -566,7 +571,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 - PDF and CSV report
 - Email when a report is ready
 - Audit log and data-sources page
-- 18 portal tests and 59 pipeline tests
+- 19 portal tests and 59 pipeline tests
 
 **Known limits:**
 

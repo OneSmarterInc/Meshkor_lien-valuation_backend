@@ -79,8 +79,10 @@ class ContractTests(APITestCase):
         det = self.client.get(f"/api/cases/{cid}/").data
         self.assertEqual(det["flags"], []); self.assertIsNone(det["hospital_match"]); self.assertIsNone(det["stay"])
         self.assertEqual(set(det["totals"]), {"billed", "payer_rate", "median", "cash", "medicare", "cost"})
-        self.assertEqual(self.client.get(f"/api/cases/{cid}/lines/").data, [])
-        self.assertIn("could not be read", det["status_detail"])   # the dummy PDF has no text: pricing stops with a reason
+        self.assertEqual(self.client.get(f"/api/cases/{cid}/lines/").status_code, 403)     # firm: no draft before release
+        self.assertEqual(self.client.get(f"/api/cases/{cid}/report/").status_code, 403)
+        self.assertEqual(det["status_detail"], "MeshKor is looking at this bill.")                # not the internal reason
+        self.assertIn("could not be read", case.status_detail)    # the dummy PDF has no text: pricing stops with a reason (staff see it)
         # another firm: 404, and its list is empty
         self.client.credentials(); self.login("bob@other.test")
         self.assertEqual(self.client.get(f"/api/cases/{cid}/").status_code, 404)
@@ -135,6 +137,9 @@ class ContractTests(APITestCase):
         self.assertEqual(csv.status_code, 200); self.assertIn(b"99285", csv.content)
         r = self.client.post(f"/api/cases/{cid}/feedback/", {"outcome": "reduced", "pricing_model": "per_report", "price_per_report": 250, "comment": ""}, format="json")
         self.assertEqual(r.status_code, 201)
+        r = self.client.post(f"/api/cases/{cid}/feedback/", {"outcome": "no_change", "pricing_model": None, "price_per_report": None}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)                                          # blank dropdown is not a 500
+        self.assertEqual(self.client.get(f"/api/cases/{cid}/lines/").status_code, 200)         # released: the firm sees the lines
         self.client.credentials(); self.login("rev@meshkor.test")
         a = self.client.get(f"/api/audit/?case={cid}").data
         self.assertTrue(any(e["action"] == "Report approved and sent" for e in a["results"]))
@@ -143,11 +148,13 @@ class ContractTests(APITestCase):
     def test_drg_confirm_and_data_sources(self):
         self.login("rev@meshkor.test")
         cid = self.upload(firm_id=self.f1.id).data["id"]
-        case = Case.objects.get(pk=cid); case.setting = "inpatient"; case.save()
+        case = Case.objects.get(pk=cid); case.setting = "inpatient"; case.status = "needs_review"; case.save()
         Stay.objects.create(case=case, ms_drg="481", drg_title="Hip and femur procedures except major joint with CC", los_days=3)
         self.assertEqual(self.client.get(f"/api/cases/{cid}/").data["stay"]["ms_drg"], "481")
         r = self.client.post(f"/api/cases/{cid}/drg/confirm/", {"ms_drg": "481"}, format="json")
         self.assertTrue(r.data["drg_confirmed"])
         d = self.client.get("/api/data-sources/").data
-        self.assertIn("reference", d); self.assertIn("price_files", d); self.assertIsNone(d["verify"])
-        self.assertTrue(any(x["status"] == "missing" for x in d["reference"]))
+        self.assertIn("reference", d); self.assertIn("price_files", d)
+        # verify comes from the VerifyRun table, or from data/reports/verify_latest.md when no run is recorded
+        self.assertTrue(d["verify"] is None or {"pass", "fail", "run_at"} <= set(d["verify"]))
+        self.assertTrue(all(x["status"] in ("ok", "partial", "missing") for x in d["reference"]))
