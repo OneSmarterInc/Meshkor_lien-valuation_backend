@@ -544,7 +544,7 @@ All of these run from the repository root, with `.venv` active.
 
 ## 11. Tests
 
-**Portal and pricing tests (28):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+**Portal and pricing tests (34):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
 
 ```powershell
 $env:DB_ENGINE="sqlite"
@@ -581,8 +581,9 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 3. **Uploads are encrypted** with `MESHKOR_FILE_KEY` (Fernet: AES-128 + HMAC). The database never holds the file bytes.
 4. **Keep `MESHKOR_FILE_KEY` and `DJANGO_SECRET_KEY` secret and backed up.** Never in Git, never in a chat.
 5. **Everyone gets their own account.** Do not share logins, because the audit log names the person.
-6. **Firm isolation is in the API.** Do not add an endpoint that returns cases without `visible_cases(user)`.
-7. **For production:** HTTPS only, `DJANGO_DEBUG=0`, a real `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`, the upload folder on encrypted storage, and backups of PostgreSQL and the upload folder. Any outside service that sees PHI (OCR, email, hosting) needs a BAA.
+6. **Password guessing is slowed down** (`accounts/throttle.py`). After 5 wrong passwords in 15 minutes for one email from one computer, that computer must wait 15 minutes for that email (answer `429` with "Try again in N minutes"). One computer failing 20 times on any accounts, or one email failing 50 times from any computers, is also blocked. The owner signing in from another computer is not affected, and a correct password clears the count. Every block is written to the audit log.
+7. **Firm isolation is in the API.** Do not add an endpoint that returns cases without `visible_cases(user)`.
+8. **For production:** HTTPS only, `DJANGO_DEBUG=0`, a real `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`, the upload folder on encrypted storage, and backups of PostgreSQL and the upload folder. Any outside service that sees PHI (OCR, email, hosting) needs a BAA.
 
 ---
 
@@ -598,7 +599,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 - PDF and CSV report
 - Email when a report is ready
 - Audit log and data-sources page
-- 28 portal tests and 59 pipeline tests
+- 34 portal tests and 59 pipeline tests
 
 **Known limits:**
 

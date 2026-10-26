@@ -54,3 +54,14 @@ def is_staff_role(user) -> bool:
 def firm_of(user):
     p = getattr(user, "profile", None)
     return p.firm if p else None
+
+
+class LoginAttempt(models.Model):
+    """One failed sign-in. Used to slow down password guessing (accounts/throttle.py).
+    Kept 1 day, then deleted by the next sign-in."""
+    at = models.DateTimeField(auto_now_add=True, db_index=True)
+    email = models.CharField(max_length=254, db_index=True)    # as typed, lower-case
+    ip = models.CharField(max_length=45, db_index=True)        # IPv4 or IPv6
+
+    class Meta:
+        ordering = ["-at"]
