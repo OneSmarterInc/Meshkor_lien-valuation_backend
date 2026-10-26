@@ -111,7 +111,7 @@ On the screen, a case has **3 steps: 1 Upload → 2 Review → 3 Report & send.*
 
 ### Step 1: Upload (law firm, or staff for a firm)
 
-1. The user picks the bill (PDF, JPG, PNG or TIFF, up to 50 MB), with an EOB if they have one.
+1. The user picks the bill (PDF, Word .docx, JPG, PNG or TIFF, up to 50 MB), with an EOB if they have one. The server checks the file's first bytes, so a renamed file is refused.
 2. They enter their matter reference and say who the report is for (plaintiff, defense or lien resolution).
 3. They tick **"client consented"**. The server stores the time of consent.
 4. The server **encrypts** the files and stores them outside the repository. The database keeps only the name, size, SHA-256 and path.
@@ -171,12 +171,22 @@ The code is in `pipeline/lien/`. `backend/cases/processing.py` is the **only** p
 
 ### 4.1 Read the bill (`reader.py`)
 
-- Reads the text layer of the PDF with `pdfplumber`. It ignores very large text, such as a "COPY" watermark.
+- **Which file, which method:**
+
+  | File | Read by | Exact? |
+  |---|---|---|
+  | PDF from the billing system (has a text layer) | `pdfplumber` text | Yes |
+  | Word `.docx` | its paragraphs and tables (`python-docx`) | Yes |
+  | Scanned PDF, JPG, PNG, TIFF, or a picture inside a Word file | **OCR** on this computer (`ocr.py`, RapidOCR) | No: checked by a person |
+
+- Very large text, such as a "COPY" watermark, is ignored (by font size in a PDF, by letter height in OCR). OCR also straightens a tilted photo and applies the phone's rotation.
 - **From the header:** hospital name, CCN, NPI, type of bill, MS-DRG, service dates, payer, reason for visit, stated total.
 - **From each line:** `[line no] date  revenue code  [HCPCS/CPT] [modifiers]  units  description  charge`. A description that wraps onto the next line is joined back.
 - Each line gets a **confidence**. It is lower when a line number is skipped or a value looks odd, and anything under 90 % becomes a `check` flag.
 - **Inpatient** means a type of bill of 011x or 012x, or an MS-DRG on the bill.
-- A scan or a photo (a file with no text layer) stops with a clear message, and the case goes to `error`. See [section 13](#13-status-limits-and-next-steps).
+- **OCR rules:** a line's certainty is at most the OCR certainty of its text, and never above 95 %. When OCR misses a value (often a thin "1" in the Units column, sometimes a revenue code or the description), the line is still read, the missing value gets a safe default (1 unit), its certainty drops to 85 %, and a note names what was missing. Every OCR bill gets a **check** flag, "Bill read from a scan or photo by OCR: compare the lines with the bill". The check that the lines add up to the bill total still runs.
+- **The OCR engine:** RapidOCR (PP-OCR models on ONNX Runtime). It is free (Apache-2.0 licence) and runs **on this computer**: the bill is never sent anywhere. On first use it downloads its 3 model files (about 32 MB) once; after that it works offline. Speed: about 5 seconds per page. Tested on the 10 synthetic bills as clean scans and as tilted, blurred phone photos: **143 of 146 lines and 80 of 80 header fields exact**, and the 3 misses were all flagged. Tesseract, the other free engine, read 71 of 146 lines on the same images.
+- A file that cannot be read at all (too blurred, an unknown layout) goes to `error`, with the reason.
 
 ### 4.2 Find the hospital (`match.py`)
 
@@ -583,7 +593,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 
 | Limit | What happens today | Plan |
 |---|---|---|
-| Scanned bills and photos | The case goes to `error` ("no text layer") | Add OCR. Local Tesseract keeps the PHI on our server; a cloud OCR service needs a BAA. |
+| Scanned bills and photos | Read by local OCR (RapidOCR); every OCR bill is checked by a reviewer | Test with real scans as they arrive; tune `LOOSE_RX` in `reader.py` for new layouts |
 | New bill layouts | The reader knows line lists in the order date, revenue code, code, units, description, charge | Add patterns in `reader.py` (`LINE_RX`) as real bills arrive. Test each one with `try_bill`. |
 | EOBs | Stored, not read | Read the allowed and paid amounts into the report |
 | Only 2 hospitals have price files | Other hospitals go to `no_price_file` | Load Miami Valley (JSON) and Cleveland Clinic, then the other Ohio hospitals |

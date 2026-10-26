@@ -52,6 +52,9 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         bill = reader.read(storage.read(bill_file), bill_file.name)
     except reader.BillNotReadable as e:
         return _fail(case, f"The bill could not be read: {e}", user)
+    except Exception as e:  # noqa: BLE001 — e.g. OCR not installed on this PC
+        log.exception("reading the bill failed for %s", case.case_number)
+        return _fail(case, f"The bill could not be read: {type(e).__name__}: {str(e)[:200]}", user)
     if drg_override:
         bill.ms_drg = drg_override
     try:
@@ -70,6 +73,15 @@ def process(case, drg_override: str | None = None, user=None) -> None:
     finally:
         con.close()
 
+    if bill.method != "text":
+        how = {"ocr": "a scan or photo", "docx": "a Word file", "docx+ocr": "a picture inside a Word file"}[bill.method]
+        low = [ln.line_no for ln in bill.lines if ln.confidence is not None and ln.confidence < 0.9]
+        res.flags.insert(0, {"kind": "low_confidence", "severity": "check" if bill.method != "docx" else "info", "line_no": None,
+                             "title": f"Bill read from {how}" + (" by OCR: compare the lines with the bill" if "ocr" in bill.method else ""),
+                             "detail": (f"Lowest line certainty {round((bill.ocr_score or 0) * 100)} %. " if bill.ocr_score is not None else "")
+                                       + (f"Lines to look at first: {', '.join(map(str, low))}. " if low else "")
+                                       + (" ".join(bill.notes) + " " if bill.notes else "")
+                                       + "Check that the total matches the bill."})
     if not hosp.certain:
         res.flags.insert(0, {"kind": "other", "severity": "check", "line_no": None,
                              "title": f"Hospital matched by name: {hosp.name} (CCN {hosp.ccn})",
@@ -96,7 +108,7 @@ def process(case, drg_override: str | None = None, user=None) -> None:
                                 drg_source="reviewer" if drg_override else "bill", drg_confirmed=bool(drg_override),
                                 los_days=st["los_days"], diagnoses=st["diagnoses"],
                                 values={**st["values"], "sources": st["sources"], "medicare_source": st.get("medicare_source", "")})
-        case.bill_type = "UB-04" if bill.type_of_bill else "itemized"
+        case.bill_type = ("UB-04" if bill.type_of_bill else "itemized") + {"text": "", "docx": " (Word)", "ocr": " (OCR)", "docx+ocr": " (OCR)"}[bill.method]
         case.visit_summary = _summary(bill)
         case.hospital_name, case.ccn, case.npi = hosp.name[:200], hosp.ccn, (bill.npi or hosp.npi or "")[:10]
         case.setting = case.Setting.INPATIENT if bill.inpatient else case.Setting.OUTPATIENT

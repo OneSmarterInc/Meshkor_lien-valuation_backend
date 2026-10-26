@@ -15,7 +15,10 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 
 ALLOWED = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-           ".png": "image/png", ".tif": "image/tiff", ".tiff": "image/tiff"}
+           ".png": "image/png", ".tif": "image/tiff", ".tiff": "image/tiff",
+           ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+# The first bytes must match the extension (a renamed .exe is refused); see pipeline/lien/reader.kind_of.
+KIND_FOR_EXT = {".pdf": "pdf", ".jpg": "jpg", ".jpeg": "jpg", ".png": "png", ".tif": "tiff", ".tiff": "tiff", ".docx": "docx"}
 MAX_BYTES = 50 * 1024 * 1024
 
 
@@ -36,9 +39,14 @@ def check_upload(f, field: str) -> str:
     """Return the content type, or raise ValueError with a message for the form."""
     ext = Path(f.name or "").suffix.lower()
     if ext not in ALLOWED:
-        raise ValueError(f"{field}: only PDF, JPG, PNG or TIFF files are accepted.")
+        raise ValueError(f"{field}: only PDF, Word (.docx), JPG, PNG or TIFF files are accepted.")
     if f.size > MAX_BYTES:
         raise ValueError(f"{field}: the file is larger than 50 MB.")
+    from pipeline.lien.reader import kind_of
+    head = f.read(1 << 16) if ext != ".docx" else f.read()
+    f.seek(0)
+    if kind_of(head) != KIND_FOR_EXT[ext]:
+        raise ValueError(f"{field}: the file is not a real {ext[1:].upper()} file (it may be damaged or renamed).")
     return ALLOWED[ext]
 
 

@@ -14,3 +14,7 @@ cryptography>=43
 reportlab>=4.2
 # ---- pricing step: read bill PDFs (Oct 23, 2026)
 pdfplumber>=0.11
+# ---- bills as scans, photos and Word files (Oct 26, 2026): free local OCR
+rapidocr>=3.4
+onnxruntime>=1.18
+python-docx>=1.1

@@ -46,6 +46,56 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(b8.lines[3].hcpcs, ""); self.assertEqual(b8.lines[3].units, Decimal("3"))   # room and board, no code
         self.assertTrue(b8.lines[11].description.endswith("MINS"))                                   # wrapped text joined
 
+    def _photo(self, name="B01"):
+        """A tilted, blurred phone-photo of a synthetic test bill, as JPEG bytes."""
+        import io as _io
+        import pypdfium2 as pdfium
+        from PIL import ImageFilter
+        img = pdfium.PdfDocument(bill(name))[0].render(scale=200 / 72).to_pil().convert("RGB")
+        img = img.resize((int(img.width * 0.75), int(img.height * 0.75))).rotate(1.0, expand=True, fillcolor=(235, 232, 225))
+        img = img.filter(ImageFilter.GaussianBlur(0.6))
+        out = _io.BytesIO(); img.save(out, "JPEG", quality=70)
+        return out.getvalue()
+
+    def test_ocr_reads_a_phone_photo(self):
+        b = reader.read(self._photo("B01"), "photo.jpg")
+        self.assertEqual(b.method, "ocr")
+        self.assertEqual((b.ccn, b.payer, str(b.date_from)), ("360085", "Anthem", "2026-08-14"))
+        self.assertEqual(len(b.lines), 11)
+        self.assertEqual(b.lines_total, Decimal("9647.87")); self.assertEqual(b.stated_total, Decimal("9647.87"))
+        self.assertTrue(all(ln.confidence <= 0.95 for ln in b.lines))          # OCR is never "certain"
+        codes = [ln.hcpcs for ln in b.lines]
+        self.assertEqual(codes[:3], ["99285", "70450", "72125"])
+
+    def test_ocr_reads_a_scanned_pdf(self):
+        import io as _io
+        from PIL import Image
+        buf = _io.BytesIO(); Image.open(_io.BytesIO(self._photo("B08"))).save(buf, "PDF")
+        b = reader.read(buf.getvalue(), "scan.pdf")
+        self.assertEqual(b.method, "ocr"); self.assertTrue(b.inpatient); self.assertEqual(b.ms_drg, "481")
+        self.assertEqual(b.lines_total, Decimal("58612.00"))
+
+    def test_word_file_with_a_table(self):
+        import io as _io
+        import docx
+        d = docx.Document()
+        for t in ("Facility OHIO STATE UNIVERSITY HOSPITALS", "CCN 360085", "Type of bill 0131",
+                  "Service dates 2026-09-18 to 2026-09-18", "Primary payer Aetna"):
+            d.add_paragraph(t)
+        rows = [("#", "Date", "Rev", "HCPCS/CPT", "Units", "Description", "Charge"),
+                ("1", "2026-09-18", "0610", "73721", "1", "HC MRI LOWER EXTREMITY JOINT W/O CONTRAST", "$2,957.00")]
+        tb = d.add_table(rows=0, cols=7)
+        for r in rows:
+            cells = tb.add_row().cells
+            for c, v in zip(cells, r):
+                c.text = v
+        d.add_paragraph("TOTAL CHARGES $2,957.00")
+        buf = _io.BytesIO(); d.save(buf)
+        b = reader.read(buf.getvalue(), "bill.docx")
+        self.assertEqual((b.method, b.ccn, b.payer, len(b.lines)), ("docx", "360085", "Aetna", 1))
+        ln = b.lines[0]
+        self.assertEqual((ln.revenue_code, ln.hcpcs, ln.units, ln.charge), ("0610", "73721", Decimal("1"), Decimal("2957.00")))
+
     def test_not_a_readable_bill(self):
         with self.assertRaises(reader.BillNotReadable):
             reader.read(b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF", "b.pdf")
@@ -246,6 +296,24 @@ class IntakeApiTests(APITestCase):
         self.assertEqual(rep["summary"][1]["benchmark"], "No insurer on the bill")   # self-pay, no made-up insurer name
         lines = self.client.get(f"/api/cases/{r.data['id']}/lines/").data
         self.assertEqual(lines[0]["medicare"], 110.0)                       # national OPPS: James has no IPPS wage index
+
+    def test_photo_upload_is_priced_and_flagged_for_checking(self):
+        photo = ReaderAndPriceTests._photo(self, "B01")
+        r = self.client.post("/api/cases/", {"report_for": "plaintiff", "consent": "true", "firm_id": self.firm.id,
+                                             "bill": SimpleUploadedFile("bill.jpg", photo, content_type="image/jpeg")}, format="multipart")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.data["status"], "needs_review")
+        det = self.client.get(f"/api/cases/{r.data['id']}/").data
+        self.assertEqual(det["bill_type"], "UB-04 (OCR)")
+        f = det["flags"][0]
+        self.assertEqual((f["kind"], f["severity"]), ("low_confidence", "check"))
+        self.assertIn("by OCR", f["title"])
+
+    def test_renamed_file_is_refused(self):
+        r = self.client.post("/api/cases/", {"report_for": "plaintiff", "consent": "true", "firm_id": self.firm.id,
+                                             "bill": SimpleUploadedFile("bill.pdf", b"MZ\x90\x00 not a pdf", content_type="application/pdf")},
+                             format="multipart")
+        self.assertEqual(r.status_code, 400); self.assertIn("not a real PDF", str(r.data))
 
     def test_unreadable_bill_goes_to_error(self):
         r = self.client.post("/api/cases/", {"report_for": "plaintiff", "consent": "true", "firm_id": self.firm.id,
