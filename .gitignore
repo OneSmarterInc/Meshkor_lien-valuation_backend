@@ -5,6 +5,7 @@
 # ---- secrets and machine settings
 .env
 .env.*
+!.env.example
 *.env
 backend/.env
 backend/**/local_settings.py

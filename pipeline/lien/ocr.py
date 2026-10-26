@@ -21,7 +21,7 @@ MAX_SIDE = 3600          # larger images are scaled down (speed; no accuracy gai
 PDF_SCALE = 200 / 72     # render scanned PDF pages at 200 dpi
 
 
-class OcrNotInstalled(Exception):
+class OcrNotInstalled(ImportError):
     pass
 
 
@@ -39,7 +39,7 @@ def _get_engine():
             from rapidocr import RapidOCR
             logging.getLogger("RapidOCR").setLevel(logging.WARNING)
         except ImportError as e:  # pragma: no cover
-            raise OcrNotInstalled("OCR is not installed. Run: python -m pip install -r requirements.txt") from e
+            raise OcrNotInstalled("OCR is not installed on this server: run  python -m pip install -r requirements.txt") from e
         _engine = RapidOCR()
     return _engine
 
@@ -83,9 +83,17 @@ def _group_lines(boxes: list[tuple[list, str, float]]) -> list[OcrLine]:
     return [ln for ln in out if ln.text]
 
 
+def _numpy():
+    try:
+        import numpy as np
+        return np
+    except ImportError as e:
+        raise OcrNotInstalled("OCR is not installed on this server: run  python -m pip install -r requirements.txt") from e
+
+
 def image_lines(img) -> list[OcrLine]:
     """OCR one PIL image."""
-    import numpy as np
+    np = _numpy()
     img = img.convert("RGB")
     side = max(img.size)
     if side > MAX_SIDE:

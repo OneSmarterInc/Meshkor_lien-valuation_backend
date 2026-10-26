@@ -75,6 +75,14 @@ class ReaderAndPriceTests(SimpleTestCase):
         self.assertEqual(b.method, "ocr"); self.assertTrue(b.inpatient); self.assertEqual(b.ms_drg, "481")
         self.assertEqual(b.lines_total, Decimal("58612.00"))
 
+    def test_missing_ocr_packages_say_so(self):
+        import sys
+        from pipeline.lien import ocr
+        with mock.patch.dict(sys.modules, {"numpy": None}):
+            with self.assertRaises(ocr.OcrNotInstalled) as cm:
+                reader.read(self._photo("B01"), "photo.jpg")
+        self.assertIn("pip install -r requirements.txt", str(cm.exception))
+
     def test_word_file_with_a_table(self):
         import io as _io
         import docx

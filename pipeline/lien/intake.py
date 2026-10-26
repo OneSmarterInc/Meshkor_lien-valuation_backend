@@ -52,6 +52,8 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         bill = reader.read(storage.read(bill_file), bill_file.name)
     except reader.BillNotReadable as e:
         return _fail(case, f"The bill could not be read: {e}", user)
+    except ImportError as e:            # ocr.OcrNotInstalled, or another missing package
+        return _fail(case, f"The bill could not be read: {e}", user)
     except Exception as e:  # noqa: BLE001 — e.g. OCR not installed on this PC
         log.exception("reading the bill failed for %s", case.case_number)
         return _fail(case, f"The bill could not be read: {type(e).__name__}: {str(e)[:200]}", user)

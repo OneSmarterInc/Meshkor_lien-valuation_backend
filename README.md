@@ -369,7 +369,6 @@ check_project.py              is all the data for the lien report here?
 check_downloads.ps1           are the raw downloads complete and unchanged?
 register.py                   builds data_register.xlsx (every release, file and table)
 load_msdrg.py, verify_msdrg.py, register_msdrg.py   MS-DRG loader (standalone for now)
-load_mrf.py, verify_mrf.py, register_mrf.py         first price-file loader (replaced by pipeline/ref/hospital_mrf.py)
 ```
 
 ---
@@ -406,7 +405,7 @@ Check which port your PostgreSQL uses (`port =` in `C:\Program Files\PostgreSQL\
 
 ### Step 3: Make `.env`
 
-Make a file named `.env` in the repository root ([section 8](#8-settings-env) lists every setting). The minimum is:
+Copy `.env.example` to `.env` in the repository root (`copy .env.example .env`) and fill in the values. It lists every setting with a short note; [section 8](#8-settings-env) explains them. The minimum is:
 
 ```
 POSTGRES_DB=meshkor

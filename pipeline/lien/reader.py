@@ -92,6 +92,9 @@ def docx_text(data: bytes) -> tuple[list[str], list[bytes]]:
     import zipfile
     try:
         import docx
+    except ImportError as e:
+        raise BillNotReadable("Word files cannot be read on this server yet: run  python -m pip install -r requirements.txt") from e
+    try:
         d = docx.Document(io.BytesIO(data))
     except Exception as e:  # noqa: BLE001
         raise BillNotReadable(f"The Word file could not be opened ({type(e).__name__}).") from e

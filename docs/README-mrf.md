@@ -1,5 +1,7 @@
 # MeshKor Step 2: hospital price files, load and verify
 
+> **Historical (October 22, 2026).** The scripts `load_mrf.py`, `verify_mrf.py` and `register_mrf.py` described here were removed on October 26, 2026. Load price files with `python backend\manage.py load_ref ref_hospital_mrf` or `tools\hpt_one.ps1` (see `README-hpt.md`). Data loaded with the old scripts still works: the pricing step reads both layouts.
+
 Date: October 22, 2026. First file: Ohio State University Hospitals, CCN 360085.
 
 ## Files (put all 4 in `D:\meshkor-data`)
