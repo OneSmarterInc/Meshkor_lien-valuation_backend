@@ -116,7 +116,9 @@ On the screen, a case has **3 steps: 1 Upload → 2 Review → 3 Report & send.*
 3. They tick **"client consented"**. The server stores the time of consent.
 4. The server **encrypts** the files and stores them outside the repository. The database keeps only the name, size, SHA-256 and path.
 5. The server gives the case a number (`MK-2026-0001`, `MK-2026-0002`, …).
-6. **The pricing step starts at once** ([section 4](#4-how-a-bill-is-priced)). It takes a few seconds.
+6. **The upload answers at once.** The pricing step ([section 4](#4-how-a-bill-is-priced)) runs **in the background**: a hospital PDF takes a few seconds, a scan or photo (OCR) can take a minute. The case shows **Processing**, and the Review page and the case lists fill in by themselves when it ends.
+   - Who does the pricing is set by `MESHKOR_PRICING` (section 8). The default, `thread`, needs nothing extra.
+   - If the server stops during pricing, the case is not lost. It is priced again the next time a reviewer opens **Cases** (or by `pricing_worker`).
 
 ### Step 2: Review (MeshKor reviewer)
 
@@ -471,6 +473,8 @@ python backend\manage.py verify_step1          # expect 0 fail in data\reports\v
 | `MESHKOR_UPLOAD_DIR` | `<data>/uploads` | Where the encrypted bills live. Keep it outside the repository on a server. |
 | `MESHKOR_RAW_DIR` | `<data>/raw` | Folder with the raw CMS downloads |
 | `MESHKOR_SOURCES` | `sources.yaml` | `sources_local.yaml` on the build PC |
+| `MESHKOR_PRICING` | `thread` | Who prices a new upload. `thread`: the web server, in the background (nothing else to run). `worker`: the web server only queues; run `pricing_worker` too (live server with more than one web process). `inline`: the upload waits (the tests use this). |
+| `MESHKOR_PRICING_THREADS` | `2` | How many bills are priced at the same time in `thread` mode. OCR uses a lot of CPU. |
 | `MESHKOR_FOUR_EYES` | `0` | `1` = a different reviewer must approve a case whose flags you resolved |
 | `MESHKOR_PORTAL_URL` | `http://localhost:5173` | Link in the "report ready" email |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,…` | Website addresses allowed to call the API (production) |
@@ -523,6 +527,8 @@ All of these run from the repository root, with `.venv` active.
 | `python backend\manage.py runserver 8000` | Starts the API on port 8000 |
 | `python backend\manage.py create_portal_user --email … --password … --role firm\|reviewer\|admin [--firm "…"] [--name "…"]` | Makes or updates a user |
 | `python backend\manage.py try_bill <bill.pdf> [--payer "…"] [--ccn …] [--drg …]` | Reads and prices one bill PDF and prints the lines, totals and flags. **It writes nothing.** Use it to test a new bill layout or a new price file. |
+| `python backend\manage.py pricing_worker` | Prices the waiting uploads; keeps running. Only needed with `MESHKOR_PRICING=worker`. More than one is safe. |
+| `python backend\manage.py pricing_worker --once` | Prices what is waiting now (also cases a server stop left in Processing), then stops |
 | `python backend\manage.py reprocess_case MK-2026-0007` | Prices a case again, for example after a missing price file was loaded |
 | `python backend\manage.py reprocess_case --status no_price_file` | Prices every case in that status again. Sent cases are never touched. |
 
@@ -611,7 +617,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 | Only 2 hospitals have price files | Other hospitals go to `no_price_file` | Load Miami Valley (JSON) and Cleveland Clinic, then the other Ohio hospitals |
 | 2024–2025 price-file history | No free complete source | Use the estimate basis; archived files must be labeled as not official |
 | Inpatient Medicare | IPPS estimate without outliers or transfers | Add outlier logic and the CMS grouper if needed |
-| Pricing runs inside the upload request | A few seconds per bill | Move it to a background queue if volume grows |
+| DRG change on the Review page | Priced again while the reviewer waits (a few seconds; an OCR bill is read again) | Keep the read lines, so only the pricing runs again |
 | PDF layout | Simple one-column report | Designed report layout |
 
 **Before going live:** a server, a domain, HTTPS, PostgreSQL backups, secrets in a vault, real email, a security review and a BAA with each vendor that sees PHI.

@@ -393,3 +393,65 @@ class IntakeApiTests(APITestCase):
                              format="multipart")
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data["status"], "error"); self.assertIn("could not be read", r.data["status_detail"])
+
+    # ---- background pricing (cases/processing.py) ----
+    def test_worker_mode_queues_then_the_worker_prices(self):
+        from io import StringIO
+        from django.core.management import call_command
+        with override_settings(MESHKOR_PRICING="worker"):
+            r = self.upload("B01")
+            self.assertEqual(r.status_code, 201)
+            self.assertEqual(r.data["status"], "uploaded")                 # the upload answers at once
+            det = self.client.get(f"/api/cases/{r.data['id']}/").data
+            self.assertEqual(det["status"], "uploaded")
+            out = StringIO()
+            call_command("pricing_worker", "--once", stdout=out)
+        self.assertIn("needs_review", out.getvalue())
+        self.assertIn("1 case(s) priced", out.getvalue())
+        c = Case.objects.get(pk=r.data["id"])
+        self.assertEqual((c.status, float(c.billed_total)), ("needs_review", 9647.87))
+        out = StringIO(); call_command("pricing_worker", "--once", stdout=out)
+        self.assertIn("0 case(s) priced", out.getvalue())                 # never priced twice
+
+    def test_a_case_is_claimed_by_one_caller_only(self):
+        from . import processing
+        with override_settings(MESHKOR_PRICING="worker"):
+            cid = self.upload("B01").data["id"]
+        self.assertTrue(processing.claim(cid))
+        self.assertFalse(processing.claim(cid))
+        self.assertFalse(processing.price_waiting_case(cid))
+
+    def test_a_case_stuck_by_a_server_stop_is_queued_again(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from . import processing
+        with override_settings(MESHKOR_PRICING="worker"):
+            cid = self.upload("B01").data["id"]
+        processing.claim(cid)                                                # it started, then the server stopped
+        Case.objects.filter(pk=cid).update(updated_at=timezone.now() - timedelta(minutes=31))
+        self.assertIn(cid, [c.pk for c in processing.waiting()])
+        self.assertEqual(Case.objects.get(pk=cid).status, "uploaded")
+        self.assertTrue(processing.price_waiting_case(cid))
+        self.assertEqual(Case.objects.get(pk=cid).status, "needs_review")
+
+    def test_thread_mode_prices_after_the_upload_is_saved(self):
+        from . import processing
+        with override_settings(MESHKOR_PRICING="thread"), \
+             mock.patch.object(processing, "_submit", side_effect=lambda cid, uid: processing.price_waiting_case(cid, uid)) as sub, \
+             self.captureOnCommitCallbacks(execute=True):
+            r = self.upload("B01")
+        self.assertEqual(r.data["status"], "uploaded")
+        sub.assert_called_once()
+        self.assertEqual(Case.objects.get(pk=r.data["id"]).status, "needs_review")
+
+    def test_thread_mode_resumes_cases_left_by_a_restart(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from . import processing
+        with override_settings(MESHKOR_PRICING="worker"):
+            cid = self.upload("B01").data["id"]
+        Case.objects.filter(pk=cid).update(updated_at=timezone.now() - timedelta(minutes=3))
+        with override_settings(MESHKOR_PRICING="thread"), \
+             mock.patch.object(processing, "_submit", side_effect=lambda c, u: processing.price_waiting_case(c, u)):
+            self.client.get("/api/cases/")                                  # a reviewer opens the case list
+        self.assertEqual(Case.objects.get(pk=cid).status, "needs_review")

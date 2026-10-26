@@ -53,6 +53,8 @@ class CaseList(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
+        if is_staff_role(request.user):
+            processing.resume_stuck()           # after a server restart, nothing stays stuck in "Processing"
         qs = visible_cases(request.user)
         st = request.query_params.get("status")
         if st:
@@ -88,7 +90,7 @@ class CaseList(APIView):
             bill = storage.save(case, "bill", d["bill"])
             eob = storage.save(case, "eob", d["eob"]) if d.get("eob") else None
         log(request.user, "Bill uploaded", f"{bill.name} · consent recorded" + (f" · EOB {eob.name}" if eob else ""), case)
-        processing.start(case, user=request.user)
+        processing.start(case, user=request.user)   # in the background: the upload answers now
         case.refresh_from_db()
         return Response(CaseSummarySerializer(case).data, status=status.HTTP_201_CREATED)
 

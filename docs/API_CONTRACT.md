@@ -95,7 +95,7 @@ Query: `status` (one value or comma list), `search` (case number, matter ref, ho
 
 ### `POST /api/cases/` (multipart/form-data)
 Fields: `matter_ref` (text), `report_for` (`plaintiff` | `defense` | `lien_resolution`), `consent` (`true`, required), `bill` (file, required, PDF/JPG/PNG/TIFF ≤ 50 MB), `eob` (file, optional).
-Staff may also send `firm_id`. → `201` case summary (status `uploaded`).
+Staff may also send `firm_id`. → `201` case summary (status `uploaded`). The answer comes at once; the pricing runs in the background (`uploaded` → `processing` → `needs_review`, `no_price_file` or `error`). Poll `GET /api/cases/{id}/` (the website does every 3 s) until the status leaves `uploaded`/`processing`.
 
 ### `GET /api/cases/{id}/` (case detail)
 Case summary plus:

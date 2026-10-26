@@ -157,6 +157,9 @@ MESHKOR_FILE_KEY = os.environ.get("MESHKOR_FILE_KEY", "")
 if not MESHKOR_FILE_KEY and not DEBUG and "test" not in sys.argv:
     import warnings
     warnings.warn("MESHKOR_FILE_KEY is not set; bill uploads will fail until it is.")
+# Who prices a new upload (see cases/processing.py): thread (default) | worker | inline. The tests use inline.
+MESHKOR_PRICING = "inline" if "test" in sys.argv else os.environ.get("MESHKOR_PRICING", "thread")
+MESHKOR_PRICING_THREADS = int(os.environ.get("MESHKOR_PRICING_THREADS", "2"))   # bills priced at the same time
 MESHKOR_FOUR_EYES = os.environ.get("MESHKOR_FOUR_EYES", "0") == "1"    # a different reviewer must approve
 MESHKOR_PORTAL_URL = os.environ.get("MESHKOR_PORTAL_URL", "http://localhost:5173")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 55 * 1024 * 1024
