@@ -9,12 +9,11 @@ Ends in one of:
 from __future__ import annotations
 
 import logging
-import traceback
 
 from django.db import transaction
 from django.utils import timezone
 
-from . import match, price, reader
+from . import eob as eob_reader, match, price, reader
 from .db import ReferenceDataMissing, connect
 
 log = logging.getLogger("meshkor.lien")
@@ -38,6 +37,30 @@ def _fail(case, detail: str, user=None):
     audit(user, "Processing stopped", detail, case)
 
 
+def _read_eob(case, eob_file, bill, res, storage) -> tuple[dict | None, dict]:
+    """Read the EOB and compare it with the bill. A bad EOB never stops the case: it becomes a flag."""
+    try:
+        e = eob_reader.read(storage.read(eob_file), eob_file.name)
+        main = (res.totals or {}).get("basis") or "service_date"
+        by_line = {d["line_no"]: d["payer_rate"] for d in res.lines.get(main, []) if d.get("payer_rate") is not None}
+        stay_rate = ((res.stay or {}).get("values") or {}).get("payer_rate") if res.stay else None
+        summary, per_line, flags = eob_reader.compare(e, bill, res.payer_group, payer_rate_by_line=by_line, payer_rate_total=stay_rate)
+        summary.update({"file_name": eob_file.name, "sha256": eob_file.sha256})
+        res.flags.extend(flags)
+        return summary, per_line
+    except eob_reader.EobNotReadable as ex:
+        why = str(ex)
+    except ImportError as ex:
+        why = str(ex)
+    except Exception as ex:  # noqa: BLE001
+        log.exception("reading the EOB failed for %s", case.case_number)
+        why = f"{type(ex).__name__}"
+    res.flags.append({"kind": "eob", "severity": "check", "line_no": None, "title": "The EOB could not be read",
+                      "detail": f"Reason: {why[:200]}. The bill is priced without it. Upload a clearer copy (the PDF from the insurer's "
+                                "website reads best), or note the allowed and paid totals in the review note."})
+    return None, {}
+
+
 def process(case, drg_override: str | None = None, user=None) -> None:
     """Price one case. Safe to run again: lines, stay and open flags are replaced."""
     from cases import storage
@@ -53,6 +76,11 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         bill = reader.read(storage.read(bill_file), bill_file.name)
     except reader.BillNotReadable as e:
         return _fail(case, f"The bill could not be read: {e}", user)
+    except ImportError as e:            # ocr.OcrNotInstalled, or another missing package
+        return _fail(case, f"The bill could not be read: {e}", user)
+    except Exception as e:  # noqa: BLE001 — e.g. OCR not installed on this PC
+        log.exception("reading the bill failed for %s", case.case_number)
+        return _fail(case, f"The bill could not be read: {type(e).__name__}: {str(e)[:200]}", user)
     if drg_override:
         bill.ms_drg = drg_override
     try:
@@ -65,26 +93,40 @@ def process(case, drg_override: str | None = None, user=None) -> None:
             return _fail(case, f"Hospital not found (name “{bill.facility_name or '—'}”, CCN {bill.ccn or '—'}, "
                                f"NPI {bill.npi or '—'}). Add the CCN on the bill or in config/ccn_npi_manual.csv.", user)
         res = price.price(con, bill, hosp.ccn, bill.payer)
-    except Exception as e:  # noqa: BLE001 — record every failure on the case
+    except Exception as e:  # noqa: BLE001 — record every failure on the case; the traceback goes to the log only
         log.exception("pricing failed for %s", case.case_number)
-        return _fail(case, f"Pricing failed: {type(e).__name__}: {e}\n{traceback.format_exc(limit=3)}", user)
+        return _fail(case, f"Pricing failed: {type(e).__name__}: {str(e)[:300]}. See the server log.", user)
     finally:
         con.close()
 
+    if bill.method != "text":
+        how = {"ocr": "a scan or photo", "docx": "a Word file", "docx+ocr": "a picture inside a Word file"}[bill.method]
+        low = [ln.line_no for ln in bill.lines if ln.confidence is not None and ln.confidence < 0.9]
+        res.flags.insert(0, {"kind": "low_confidence", "severity": "check" if bill.method != "docx" else "info", "line_no": None,
+                             "title": f"Bill read from {how}" + (" by OCR: compare the lines with the bill" if "ocr" in bill.method else ""),
+                             "detail": (f"Lowest line certainty {round((bill.ocr_score or 0) * 100)} %. " if bill.ocr_score is not None else "")
+                                       + (f"Lines to look at first: {', '.join(map(str, low))}. " if low else "")
+                                       + (" ".join(bill.notes) + " " if bill.notes else "")
+                                       + "Check that the total matches the bill."})
     if not hosp.certain:
         res.flags.insert(0, {"kind": "other", "severity": "check", "line_no": None,
                              "title": f"Hospital matched by name: {hosp.name} (CCN {hosp.ccn})",
                              "detail": f"The bill shows “{bill.facility_name}” and no CCN or known NPI. Confirm the match."})
-    if case.files.filter(kind="eob").count() == 0 and res.payer_group != price.SELF_PAY:
+    eob_file = case.files.filter(kind="eob").first()
+    eob_sum, eob_lines = None, {}
+    if eob_file is None and res.payer_group != price.SELF_PAY:
         res.flags.append({"kind": "no_eob", "severity": "info", "line_no": None, "title": "No EOB uploaded",
                           "detail": "With the insurer's EOB, the report can show what was actually allowed and paid."})
+    elif eob_file is not None:
+        eob_sum, eob_lines = _read_eob(case, eob_file, bill, res, storage)
 
     with transaction.atomic():
         kept = {(f.kind, f.line_no, f.title): f for f in case.flags.filter(resolved=True)}
         case.flags.all().delete()
         case.lines.all().delete()
         for basis, lines in res.lines.items():
-            CaseLine.objects.bulk_create([CaseLine(case=case, basis=basis, **{k: v for k, v in d.items() if not k.startswith("_")})
+            CaseLine.objects.bulk_create([CaseLine(case=case, basis=basis, **{k: v for k, v in d.items() if not k.startswith("_")},
+                                                   **eob_lines.get(d["line_no"], {}))
                                           for d in lines])
         for fl in res.flags:
             old = kept.get((fl["kind"], fl["line_no"], fl["title"]))
@@ -97,7 +139,7 @@ def process(case, drg_override: str | None = None, user=None) -> None:
                                 drg_source="reviewer" if drg_override else "bill", drg_confirmed=bool(drg_override),
                                 los_days=st["los_days"], diagnoses=st["diagnoses"],
                                 values={**st["values"], "sources": st["sources"], "medicare_source": st.get("medicare_source", "")})
-        case.bill_type = "UB-04" if bill.type_of_bill else "itemized"
+        case.bill_type = ("UB-04" if bill.type_of_bill else "itemized") + {"text": "", "docx": " (Word)", "ocr": " (OCR)", "docx+ocr": " (OCR)"}[bill.method]
         case.visit_summary = _summary(bill)
         case.hospital_name, case.ccn, case.npi = hosp.name[:200], hosp.ccn, (bill.npi or hosp.npi or "")[:10]
         case.setting = case.Setting.INPATIENT if bill.inpatient else case.Setting.OUTPATIENT
@@ -106,8 +148,11 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         case.billed_total = bill.lines_total
         case.price_file = res.price_file.as_json() if res.price_file else None
         case.totals = res.totals
+        case.eob = eob_sum
         if res.price_file is None:
             case.status, case.status_detail = case.Status.NO_PRICE_FILE, "No price file loaded for this hospital."
+        elif res.totals.get("basis") == "estimate":
+            case.status, case.status_detail = case.Status.NEEDS_REVIEW, "Price file does not cover the service date: insurer rate, median and cash are estimates."
         else:
             case.status, case.status_detail = case.Status.NEEDS_REVIEW, ""
         case.updated_at = timezone.now()

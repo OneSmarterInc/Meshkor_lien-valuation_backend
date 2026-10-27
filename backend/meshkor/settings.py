@@ -133,6 +133,23 @@ CORS_ALLOW_HEADERS = ["accept", "authorization", "content-type", "x-requested-wi
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+# Behind HTTPS (production). DJANGO_SECURE=1 turns on the browser protections; the reverse proxy
+# (nginx, IIS) terminates TLS and sends X-Forwarded-Proto.
+if os.environ.get("DJANGO_SECURE", "0") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+if SECRET_KEY == "dev-only-change-me" and "test" not in sys.argv:
+    if os.environ.get("DJANGO_SECURE", "0") == "1":
+        raise RuntimeError("DJANGO_SECRET_KEY is not set. Put a 50+ character random value in .env.")
+    import warnings
+    warnings.warn("DJANGO_SECRET_KEY is not set: sign-in tokens are signed with a public default. Set it in .env.")
+
 # Bills and EOBs (PHI): encrypted, outside the repo. Make a key once:
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 MESHKOR_UPLOAD_DIR = os.environ.get("MESHKOR_UPLOAD_DIR", str(Path(MESHKOR_DATA_ROOT) / "uploads"))
@@ -140,6 +157,9 @@ MESHKOR_FILE_KEY = os.environ.get("MESHKOR_FILE_KEY", "")
 if not MESHKOR_FILE_KEY and not DEBUG and "test" not in sys.argv:
     import warnings
     warnings.warn("MESHKOR_FILE_KEY is not set; bill uploads will fail until it is.")
+# Who prices a new upload (see cases/processing.py): thread (default) | worker | inline. The tests use inline.
+MESHKOR_PRICING = "inline" if "test" in sys.argv else os.environ.get("MESHKOR_PRICING", "thread")
+MESHKOR_PRICING_THREADS = int(os.environ.get("MESHKOR_PRICING_THREADS", "2"))   # bills priced at the same time
 MESHKOR_FOUR_EYES = os.environ.get("MESHKOR_FOUR_EYES", "0") == "1"    # a different reviewer must approve
 MESHKOR_PORTAL_URL = os.environ.get("MESHKOR_PORTAL_URL", "http://localhost:5173")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 55 * 1024 * 1024

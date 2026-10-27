@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView  # noqa: F401  (used in urls)
 
 from cases.audit import log
+from . import throttle
 from .serializers import LoginSerializer, user_payload
 
 
@@ -18,9 +19,18 @@ class LoginView(APIView):
     def post(self, request):
         s = LoginSerializer(data=request.data)
         s.is_valid(raise_exception=True)
+        email = s.validated_data["email"].strip().lower()
+        ip = throttle.client_ip(request)
+        wait = throttle.blocked(email, ip)
+        if wait:
+            log(None, "Sign-in blocked", f"{email} from {ip}: too many wrong passwords")
+            return Response({"detail": f"Too many sign-in attempts. Try again in {wait} minute{'s' if wait != 1 else ''}."},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS, headers={"Retry-After": str(wait * 60)})
         user = authenticate(request, email=s.validated_data["email"], password=s.validated_data["password"])
         if user is None:
+            throttle.failed(email, ip)
             return Response({"detail": "Wrong email or password."}, status=status.HTTP_401_UNAUTHORIZED)
+        throttle.succeeded(email, ip)
         if not hasattr(user, "profile"):
             return Response({"detail": "This account has no portal role. Ask MeshKor."}, status=status.HTTP_403_FORBIDDEN)
         refresh = RefreshToken.for_user(user)

@@ -76,7 +76,11 @@ def statements() -> list[tuple[str, str]]:
     out = []
     for p in parts:
         name = p.split(":", 1)[0].strip()
-        out.append((name, p.split("\n", 1)[1].strip().rstrip(";")))
+        body = p.split("\n", 1)[1]
+        # Drop whole-line comments (a section header after the last statement would otherwise be
+        # part of it, and a table name inside the comment would make the probe below skip the macro).
+        body = "\n".join(ln for ln in body.splitlines() if not ln.lstrip().startswith("--"))
+        out.append((name, body.strip().rstrip(";")))
     return out
 
 

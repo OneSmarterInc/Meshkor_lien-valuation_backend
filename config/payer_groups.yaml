@@ -4,6 +4,7 @@
 groups:
   - {match: "medicare advantage|medicare adv|\\bMA\\b|perennial advantage|medigold|devoted|aetna.*medicare|humana.*medicare|anthem.*medicare|uhc.*medicare|united.*medicare|caresource.*medicare|molina.*medicare|wellcare|summacare.*medicare|mmo.*medicare|medical mutual.*medicare|paramount.*medicare|healthspan.*medicare|upper ohio valley.*medicar", group: "Medicare Advantage"}
   - {match: "^medicare\\b|medicare ffs|traditional medicare|original medicare", group: "Medicare"}
+  - {match: "exchange|marketplace|ambetter|\\bACA\\b|health insurance marketplace", group: "ACA Exchange"}   # private plans sold on the ACA marketplace (CareSource, Molina, Buckeye exchange plans)
   - {match: "medicaid|caresource(?!.*medicare)|molina(?!.*medicare)|buckeye|amerihealth|paramount advantage|humana healthy horizons|aetna better health|ohio ?rise|ODM\\b", group: "Medicaid"}
   - {match: "anthem|blue cross|bcbs|bluecross|empire|elevance|wellpoint", group: "Anthem"}
   - {match: "united ?health|\\bunited\\b|uhc|optum|umr|surest|oxford", group: "UnitedHealthcare"}

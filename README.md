@@ -1,326 +1,652 @@
-# meshkor-data — Step 1: CMS reference data
+# MeshKor Lien Valuation: backend
 
-This repository builds the Step 1 national reference tables (Spec v4, Oct 16, 2026) from free public CMS downloads. No PHI.
+This repository is the server side of the **MeshKor Lien Valuation portal**. The portal tells a law firm what a hospital bill is really worth.
 
-**Decisions (Oct 17, 2026)**
+A hospital bill shows "billed charges". These are list prices, and almost nobody pays them. Insurers pay much less, Medicare pays less again, and the hospital's own cost is lower still. In a personal-injury case or a lien dispute, the lawyer needs to show a **reasonable value** for each charge, with official sources. This system builds that report:
 
-| Decision | Choice |
+1. A law firm uploads the hospital bill.
+2. The system reads every line and prices it against official public data:
+   - the hospital's own posted rate with the patient's insurer,
+   - the median of its posted rates with commercial insurers,
+   - its cash price,
+   - what Medicare pays this hospital,
+   - the hospital's cost.
+3. A MeshKor reviewer checks the result and approves it.
+4. The law firm downloads a PDF report and a CSV data appendix. Every number in them points to its source file and that file's SHA-256 hash.
+
+The web screens are in the second repository, **[Meshkor_lien-valuation_frontend](https://github.com/OneSmarterInc/Meshkor_lien-valuation_frontend)**. That repository has its own README.
+
+---
+
+## Contents
+
+1. [The big picture](#1-the-big-picture)
+2. [Who uses the portal](#2-who-uses-the-portal)
+3. [The workflow, step by step](#3-the-workflow-step-by-step)
+4. [How a bill is priced](#4-how-a-bill-is-priced)
+5. [Where the numbers come from (reference data)](#5-where-the-numbers-come-from-reference-data)
+6. [Repository layout](#6-repository-layout)
+7. [Set up on a new PC (Windows)](#7-set-up-on-a-new-pc-windows)
+8. [Settings (`.env`)](#8-settings-env)
+9. [Run the portal](#9-run-the-portal)
+10. [Commands you will use](#10-commands-you-will-use)
+11. [Tests](#11-tests)
+12. [Security and PHI rules](#12-security-and-phi-rules)
+13. [Status, limits and next steps](#13-status-limits-and-next-steps)
+14. [More documents](#14-more-documents)
+
+---
+
+## 1. The big picture
+
+```
+                    ┌──────────────────────────────┐
+  Law firm  ───────▶│  Frontend (React, port 5173) │◀────── MeshKor reviewer
+  (browser)         └──────────────┬───────────────┘        (browser)
+                                   │  /api/...  (JSON, JWT login)
+                    ┌──────────────▼───────────────┐
+                    │  Backend (Django, port 8000) │   this repository
+                    │  accounts · cases · refdata  │
+                    └───────┬──────────────┬───────┘
+                            │              │
+              ┌─────────────▼───┐   ┌──────▼─────────────────────────┐
+              │  PostgreSQL     │   │  pipeline/lien  (pricing step)  │
+              │  users, cases,  │   │  reads the bill, matches the    │
+              │  lines, flags,  │   │  hospital, prices every line    │
+              │  audit log      │   └──────┬─────────────────────────┘
+              └─────────────────┘          │ read-only
+                                    ┌──────▼─────────────────────────┐
+  Encrypted bills and EOBs ──▶      │  data/meshkor.duckdb            │
+  (MESHKOR_UPLOAD_DIR, outside Git) │  CMS rate tables + hospital     │
+                                    │  price files (from Parquet)     │
+                                    └──────▲─────────────────────────┘
+                                           │ built by pipeline/ref + duckdb_build
+                                    Raw CMS downloads and hospital price files
+                                    (kept unchanged, every file hashed)
+```
+
+The system has **3 parts**:
+
+| Part | What it holds | Technology |
+|---|---|---|
+| **The portal backend** (`backend/`) | Logins, cases, uploads, review actions, reports, audit log | Django 5/6, Django REST Framework, SimpleJWT, PostgreSQL |
+| **The pricing step** (`pipeline/lien/`) | Reads a bill, finds the hospital, and prices every line | Python, pdfplumber, DuckDB |
+| **The reference data pipeline** (`pipeline/ref/`, `pipeline/hpt/`) | Turns public CMS files and hospital price files into clean tables | Python, Polars, DuckDB, Parquet |
+
+**These rules hold everywhere:**
+
+- **Official public sources only.** Every value comes from a CMS file or from the hospital's own price file, as downloaded.
+- **Every row has lineage.** Every reference row carries `source_file`, `source_sha256`, `period`, `effective_start` and `effective_end`, so a report can always say which file and which date a number came from.
+- **Raw files are never changed.** A new release goes in a new folder.
+- **PHI is kept apart.** Bills and EOBs are encrypted on disk and are never in Git (see [section 12](#12-security-and-phi-rules)).
+
+---
+
+## 2. Who uses the portal
+
+Each user has one **role**. The role decides what the user can see and do.
+
+| Role | Who | What they can do |
+|---|---|---|
+| `firm` | A lawyer or paralegal at a law firm (our customer) | Upload a bill (with an EOB if they have one). See **only their own firm's** cases. Download a report after MeshKor releases it. Give feedback on the result. |
+| `reviewer` | MeshKor staff | See every firm's cases. Check the flags, confirm the DRG, approve and send, or send back. Upload a bill on behalf of a firm (for example, when the firm emails it). |
+| `admin` | MeshKor staff | Everything a reviewer can do. Later also user management. |
+
+**The server enforces these rules, not the screen.** A firm user who asks for another firm's case gets `404 Not found`. Nothing about that case is shown.
+
+Make users with this command (there is no sign-up page; MeshKor makes the accounts):
+
+```powershell
+python backend\manage.py create_portal_user --email reviewer@meshkor.com --password "..." --role reviewer --name "Reviewer Name"
+python backend\manage.py create_portal_user --email jane@firm.com --password "..." --role firm --firm "Smith & Lee LLP" --name "Jane Doe"
+```
+
+If the firm does not exist yet, `--firm` creates it.
+
+---
+
+## 3. The workflow, step by step
+
+On the screen, a case has **3 steps: 1 Upload → 2 Review → 3 Report & send.**
+
+### Step 1: Upload (law firm, or staff for a firm)
+
+1. The user picks the bill (PDF, Word .docx, JPG, PNG or TIFF, up to 50 MB), with an EOB if they have one. The server checks the file's first bytes, so a renamed file is refused.
+2. They enter their matter reference and say who the report is for (plaintiff, defense or lien resolution).
+3. They tick **"client consented"**. The server stores the time of consent.
+4. The server **encrypts** the files and stores them outside the repository. The database keeps only the name, size, SHA-256 and path.
+5. The server gives the case a number (`MK-2026-0001`, `MK-2026-0002`, …).
+6. **The upload answers at once.** The pricing step ([section 4](#4-how-a-bill-is-priced)) runs **in the background**: a hospital PDF takes a few seconds, a scan or photo (OCR) can take a minute. The case shows **Processing**, and the Review page and the case lists fill in by themselves when it ends.
+   - Who does the pricing is set by `MESHKOR_PRICING` (section 8). The default, `thread`, needs nothing extra.
+   - If the server stops during pricing, the case is not lost. It is priced again the next time a reviewer opens **Cases** (or by `pricing_worker`).
+
+### Step 2: Review (MeshKor reviewer)
+
+The reviewer opens **Cases → (case) → Review** and sees:
+
+- the hospital that was found, and the price file used (with its date),
+- the bill total against each benchmark (billed, insurer rate, median, cash, Medicare, cost),
+- every bill line with its values and its sources,
+- for an inpatient stay: the MS-DRG, the length of stay and the value of the stay,
+- **flags**: things a person must look at.
+
+**Flags have 2 levels:**
+
+| Level | Meaning | Examples |
+|---|---|---|
+| `check` | Must be resolved before approval | Line read with low certainty · lines do not add up to the bill total · payer rate below Medicare · confirm the MS-DRG · hospital matched by name only · price file does not cover the date of service |
+| `info` | For information only | Lines packaged by Medicare · self-pay (no insurer) · no EOB uploaded · EOB read · some plans pay a % of Medicare |
+
+The reviewer resolves each `check` flag with a short note. For an inpatient stay, they confirm the DRG or type a different one. **A changed DRG is priced again at once.**
+
+### Step 3: Report & send (MeshKor reviewer)
+
+- The reviewer previews the report and can download the draft PDF and the CSV. A draft PDF is marked **DRAFT**.
+- **Approve and send:** this works only when no `check` flag is open. The case becomes `sent`, the firm gets an email, and the downloads open for the firm.
+- **Send back:** the reviewer must write why (for example, a page of the bill is missing). The case becomes `returned`.
+- **Optional four-eyes rule:** with `MESHKOR_FOUR_EYES=1`, the person who resolved the flags cannot also approve the case.
+
+### After release (law firm)
+
+- The case shows **Ready** in **My reports**.
+- The firm downloads `MK-…_valuation_report.pdf` and `MK-…_data_appendix.csv`.
+- The firm tells us the outcome (reduced, partly reduced, no change) and what a fair price per report would be.
+
+### Case statuses
+
+```
+uploaded ─▶ processing ─▶ needs_review ─▶ sent
+                       ├▶ no_price_file   (hospital found, but its price file is not loaded yet)
+                       └▶ error           (bill not readable, hospital not found, or data missing)
+            needs_review ─▶ returned      (reviewer sent it back)
+```
+
+The reason for `no_price_file` or `error` is in the case's `status_detail`, in plain words.
+
+**Every action is in the audit log:** sign-in, upload, case view, flag decision, DRG change, approval, return and every download. Staff see it on the **Audit log** page and in `/admin/`.
+
+---
+
+## 4. How a bill is priced
+
+The code is in `pipeline/lien/`. `backend/cases/processing.py` is the **only** place where the API calls it.
+
+### 4.1 Read the bill (`reader.py`)
+
+- **Which file, which method:**
+
+  | File | Read by | Exact? |
+  |---|---|---|
+  | PDF from the billing system (has a text layer) | `pdfplumber` text | Yes |
+  | Word `.docx` | its paragraphs and tables (`python-docx`) | Yes |
+  | Scanned PDF, JPG, PNG, TIFF, or a picture inside a Word file | **OCR** on this computer (`ocr.py`, RapidOCR) | No: checked by a person |
+
+- Very large text, such as a "COPY" watermark, is ignored (by font size in a PDF, by letter height in OCR). OCR also straightens a tilted photo and applies the phone's rotation.
+- **From the header:** hospital name, CCN, NPI, type of bill, MS-DRG, service dates, payer, reason for visit, stated total.
+- **From each line:** `[line no] date  revenue code  [HCPCS/CPT] [modifiers]  units  description  charge`. A description that wraps onto the next line is joined back.
+- Each line gets a **confidence**. It is lower when a line number is skipped or a value looks odd, and anything under 90 % becomes a `check` flag.
+- **Inpatient** means a type of bill of 011x or 012x, or an MS-DRG on the bill.
+- **Diagnoses:** ICD-10-CM codes on lines labelled "Diagnosis", "Dx" or "ICD-10", anywhere on the bill (a UB-04 lists them below the lines). The principal diagnosis comes first; admitting diagnoses are skipped. Each code gets its name and level from the CMS MS-DRG tables in force on the date of service (`ref_msdrg_dx`, `ref_msdrg_cc`): principal, MCC, CC or other. The DRG flag lists the MCC and CC codes, so the reviewer can see why a stay is "with MCC" or "with CC". CMS's exclusions for the principal diagnosis are not checked yet (the CMS grouper, or I/OCE for outpatient, is the planned next step).
+- **OCR rules:** a line's certainty is at most the OCR certainty of its text, and never above 95 %. When OCR misses a value (often a thin "1" in the Units column, sometimes a revenue code or the description), the line is still read, the missing value gets a safe default (1 unit), its certainty drops to 85 %, and a note names what was missing. Every OCR bill gets a **check** flag, "Bill read from a scan or photo by OCR: compare the lines with the bill". The check that the lines add up to the bill total still runs.
+- **The OCR engine:** RapidOCR (PP-OCR models on ONNX Runtime). It is free (Apache-2.0 licence) and runs **on this computer**: the bill is never sent anywhere. On first use it downloads its 3 model files (about 32 MB) once; after that it works offline. Speed: about 5 seconds per page. Tested on the 10 synthetic bills as clean scans and as tilted, blurred phone photos: **143 of 146 lines and 80 of 80 header fields exact**, and the 3 misses were all flagged. Tesseract, the other free engine, read 71 of 146 lines on the same images.
+- A file that cannot be read at all (too blurred, an unknown layout) goes to `error`, with the reason.
+
+### 4.2 Find the hospital (`match.py`)
+
+The steps are tried in this order, and the first match wins:
+
+1. **CCN** printed on the bill (the Medicare provider number).
+2. **NPI**, looked up in `ref_ccn_npi` and in the NPIs listed in the price files.
+3. **Name**, compared word by word with the hospital names. A name match always gets a `check` flag, so a person confirms it.
+
+If no step matches, the case goes to `error` with the name, CCN and NPI that were read.
+
+### 4.3 Price each line (`price.py`)
+
+The pricing step picks **the hospital's price file in force on the date of service**.
+
+**Outpatient: one set of values per bill line**
+
+| Value | How it is found |
 |---|---|
-| Django's own records (load runs, source files, verify runs) | PostgreSQL |
-| Reference data | ZSTD Parquet (main copy) and **tables** in `data/meshkor.duckdb` |
-| Web API in Step 1 | None. You get management commands and the Django admin only. |
+| **Insurer rate** (`payer_rate`) | The hospital's own posted rate for this code with the patient's insurer. When the insurer has several plans, the median of the plans is used. The insurer name on the bill is turned into a payer group (for example "Anthem", "UnitedHealthcare") by the rules in `config/payer_groups.yaml`. |
+| **Median, p10, p90** | The median and the 10th and 90th percentiles of the hospital's posted rates for the same code with **commercial insurers only** (see 4.6). |
+| **Cash** | The hospital's posted discounted cash price. When the hospital posts none, it is shown as "not posted", never as $0. |
+| **Medicare** | OPPS rate × (0.60 × hospital wage index + 0.40). Labs use the Clinical Lab Fee Schedule. Therapy uses the Physician Fee Schedule (non-facility, Ohio). Drugs use ASP + 6 %. A status-N line is **packaged** ($0). Then Medicare's claim rules are applied **per visit** (see below). |
+| **Cost** | Line charge × the hospital's **cost-to-charge ratio** from its latest Medicare cost report (HCRIS). |
 
-## 1. How it fits together
+**Medicare's claim rules (per visit):** `apply_claim_rules()` in `price.py`. A **visit** is one date of service, or dates at most 1 day apart; each visit is treated as its own Medicare claim. A bill that holds several visits gets an info flag listing them.
 
-```
-<raw folder>/<release folder>/                   downloads here, unchanged (section 3)
-        │  pipeline/ref/<loader>.py               one loader per table (plain Python + Polars)
-        ▼
-data/ref/<table>.parquet  (+ _manifest/<table>.json)
-        │  pipeline/duckdb_build.py              copies all Parquet into DuckDB tables
-        ▼
-data/meshkor.duckdb       tables + views/macros from sql/views.sql
-        │  pipeline/verify.py                    Spec §8 checks
-        ▼
-data/reports/verify_latest.md                    send this file for review
-```
-
-Django (`backend/`) runs the same steps and records each run in PostgreSQL. The pipeline does not import Django, so Steps 2–5 can use it as is.
-
-## 2. Setup (Windows, macOS or Linux)
-
-1. Install Python 3.10 or later and PostgreSQL 16 or later. (No server yet? Set `DB_ENGINE=sqlite` in `.env` and skip step 2.)
-2. Create the database:
-   ```sql
-   CREATE USER meshkor WITH PASSWORD 'change-me';
-   CREATE DATABASE meshkor OWNER meshkor;
-   ```
-3. Install the packages and settings:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate            # Windows   (macOS/Linux: source .venv/bin/activate)
-   pip install -r requirements.txt
-   copy .env.example .env            # then edit the PostgreSQL password
-   python backend/manage.py migrate
-   python backend/manage.py createsuperuser   # for the admin site
-   ```
-4. Check the code on the test files (no downloads necessary):
-   ```bash
-   python -m pytest -q               # 45 tests
-   ```
-
-**Disk and memory:** NPPES needs about 12 GB in `data/work/` while it loads (the CSV is taken out of the zip), plus about 1 GB of output. `ref_mpfs` has 12 quarters of about 2 million rows each; the loader writes one quarter at a time, so memory holds one quarter only. Load `ref_mpfs` alone on a PC with 8 GB of RAM. `data/meshkor.duckdb` is about 1–2 GB.
-
-## 3. Where the downloads are
-
-On the build PC the raw downloads are in **`D:\Datasetof CMS`**, one folder per release, extracted next to the original zip. Two lines in `.env` point the pipeline there:
-
-```
-MESHKOR_RAW_DIR=D:/Datasetof CMS
-MESHKOR_SOURCES=sources_local.yaml
-```
-
-`config/sources_local.yaml` names the folder and the file pattern of every release. `config/sources.yaml` is the same list for the test fixtures (`pytest` uses it; do not set `MESHKOR_SOURCES` in the shell when you run the tests).
-
-Rules for a release folder: put all files in it before the first load, and do not add or remove files later. The hash of a folder is the hash of all files in it, so a change makes §3.2 in the verify report fail. A new CMS release gets a new folder.
-
-| Table | Folders |
+| Rule | What happens |
 |---|---|
-| 1 `ref_provider` | `NPES` (NPPES October 2026 + deactivation report 20261012) |
-| 2 `ref_mpfs`, 14 `ref_anesthesia_cf` | `MPFS2024A`, `MPFS2024B`, `MPFS2024` (2024C), `MPFS2024D`, `MPFS2025A`–`C`, `MPFS2025` (2025D), `MPFS2026A`–`C`, `MPFS` (2026D) |
-| 3 `ref_opps` | `OPPS2024A`–`C`, `OPPS2024` (Q4), `OPPS2025A`–`C`, `OPPS2025`, `OPPS2026A`–`C`, `OPPS` |
-| 4 `ref_ipps_drg`, `ref_ipps_hospital` | `IPPS/FY2025`, `IPPS/FY2026`, `IPPS/FY2027` |
-| 5 `ref_asc` | `ASC2024A`–`C`, `ASC2024`, `ASC2025A`–`C`, `ASC2025`, `ASC2026A`–`C`, `ASC` |
-| 6 `ref_ncci_ptp` | `NCCI/PTP` (8 zips, v323r0) |
-| 6 `ref_mue` | `MUE2024A`–`C`, `MUE2024`, `MUE2025A`–`C`, `MUE2025`, `MUE2026A`–`C` (each with `hospital` and `practitioner`), `NCCI/...-10-01-2026` |
-| 7 `ref_hcris` | `HCRIS/HOSP10FY2023` … `HCRIS/HOSP10FY2026` |
-| 8 `ref_ccn_npi` | `ENROLLMENTS` (Hospital Enrollments 2026-07-31) |
-| 9 `ref_code_specialty` | `UTILIZATION` (CY2024 by provider and service) |
-| 11 `ref_clfs` | `CLFS/2024Q1` … `CLFS/2026Q4` |
-| 12 `ref_dmepos`, `ref_dmepos_rural_zip` | `DMEPOS/2024A` … `DMEPOS/2026D` |
-| 13 `ref_ambulance`, `ref_zip_locality` | `AMBULANCE/2024`, `AMBULANCE/2025`, `AMBULANCE/2026`, `ZIPLOC/2026` |
-| 14 `ref_anesthesia_base_units` | `ANESTHESIA` |
+| **Comprehensive APC (status J1)** | The visit's highest-paid J1 line is the primary and is paid in full. The other J1 lines and every other OPPS line of **that visit** are packaged into it ($0). Lines on another visit are not touched. |
+| **Never packaged into a J1** | Pass-through drugs and devices (status G, H), brachytherapy sources (U), vaccines (L, F), and lines Medicare pays on another fee schedule (labs with status A, therapy on the physician fee schedule, ASP drugs) keep their own rate. |
+| **Multiple procedure discount** | On a visit without a J1, the highest-paid procedure with status T is paid in full; every other T unit is paid at 50 %. |
+| **Revenue-code-only lines** | Paid inside the coded lines of their visit ($0). In a visit with no coded Medicare line, they have no Medicare value. |
 
-The full list with the CMS page of each release is in the project doc `meshkor-step1-download-list.md`.
+Every change is written into the line's `medicare_source`, for example "multiple procedure discount: paid at 50 %". These rules follow the CMS OPPS policies. CMS's own outpatient code editor (I/OCE) is the planned next step; once added, it will compute these lines exactly, and these rules will stay as a cross-check.
 
-## 4. Commands
+**Contract rates that are not plain dollars:**
 
-```bash
-python backend/manage.py load_ref all                 # or: load_ref ref_mpfs ref_asc
-python backend/manage.py load_ref ref_mpfs --period 2026D
-python backend/manage.py build_duckdb                 # rebuild data/meshkor.duckdb from Parquet
-python backend/manage.py verify_step1                 # Spec §8 checks → data/reports/verify_latest.md
-python backend/manage.py step1_status                 # latest run per table
-python backend/manage.py runserver                    # admin at http://localhost:8000/admin/
-```
-
-The same steps also run without Django: `python -m pipeline.runner all`, `python -m pipeline.duckdb_build`, `python -m pipeline.verify`.
-
-Only `build_duckdb` writes to the DuckDB file. It builds a new file and then swaps it in. Close any DuckDB session that has `meshkor.duckdb` open before you run it (Windows locks open files).
-
-## 4b. Data register (Excel)
-
-`python register.py` builds `data_register.xlsx`: Summary (counts, GB, free disk), Releases (every configured release: raw present, rows loaded, hash, CMS page), Planned (downloads not configured yet, from `config/register_planned.yaml`), Parquet (every table), Files (every raw file and the table that uses it). Run it after every download and every load. Type your own rows in the sheets "Download log" and "Notes"; they are kept when the file is rebuilt.
-
-## 5. Review loop (no need to send the large files)
-
-1. Put each new release in its own new folder in the raw folder (section 3) and add it to `config/sources_local.yaml`.
-2. Run `load_ref all`, then `build_duckdb`, then `verify_step1`.
-3. Send **`data/reports/verify_latest.md`**. It contains row counts, hashes, test results and the load warnings. It does not contain provider rows.
-4. If a loader stops on a column it cannot find, send the error line and the first 1,000 rows of that file.
-
-## 6. Query examples (DuckDB CLI or Python)
-
-```sql
--- Spec §8.3: one query, five codes, every Step 1 rate (Ohio locality by default)
-SELECT * FROM code_profile(DATE '2026-11-15')
-WHERE hcpcs IN ('99214','45378','29881','73721','27447');
-
--- Physician fee schedule on a date of service (defaults: carrier 15202, locality 00, no modifier)
-SELECT * FROM mpfs_rate('99214', DATE '2026-11-15');
-SELECT * FROM mpfs_rate('73721', DATE '2026-11-15', p_modifier := '26');
-
--- NCCI edits in effect on a date of service
-SELECT * FROM ncci_pairs_on_date('29881', DATE '2026-11-15', p_setting := 'hospital');
-
--- Spec §8.4: DRG 470 at one hospital (CCN), FY2027
-SELECT * FROM ipps_payment('470', DATE '2026-11-15', '360051');
-
--- Table 10: Medicare drug payment limit (ASP + 6 %) per HCPCS unit, and an NDC package priced in HCPCS units
-SELECT * FROM asp_price('J9271', DATE '2026-11-15');
-SELECT * FROM ndc_asp('00006302602', DATE '2026-11-15');
-SELECT * FROM hcpcs_info('J9271', DATE '2026-11-15');   -- name, status, dose unit
-
--- Spec §4 first market (Ohio + border zip3 from config/geography.yaml)
-SELECT market_part, metro, count(*) FROM v_provider_first_market GROUP BY ALL;
-```
-
-## 7. What each loader does
-
-| Table | Main rules |
+| What the price file says | What the pricing step does |
 |---|---|
-| `ref_provider` | Primary taxonomy = slot with switch `Y` (not slot 1); if none, slot 1 and `primary_flag_missing`. Deactivated NPIs kept (main file + monthly report). Practice-location state/zip3. CCN candidates from "Other Provider Identifier" type 06. `effective_start/end` = enumeration / deactivation date. Partitioned by state. Batched, so memory stays flat. |
-| `ref_mpfs` | CMS no longer posts a dollar file per locality, so the loader calculates it from each RVU release (2024A–2026D): (work RVU × work GPCI + PE RVU × PE GPCI + MP RVU × MP GPCI) × CF, for every code × modifier × locality (about 2.1 M rows per quarter). Output is the folder `data/ref/ref_mpfs/`, one Parquet file per quarter. Rate is null where the file marks the setting NA, or the status is not payable (A, R, T). Imaging codes are capped at the OPPSCAP amount. |
-| `ref_mpfs_locality` | Locality → counties (26LOCCO). |
-| `ref_opps` | Addendum B national rate, SI, APC, weight, copays. Wage adjustment is the `opps_wage_adjusted` macro (needs table 4). |
-| `ref_asc` | Addenda AA + BB, payment-indicator meanings from DD1. Reads `.csv` and the tab-separated `.txt` files of January and July 2024. |
-| `ref_ncci_ptp` | Both settings, all parts. Deleted edits kept. Row-level `effective_start` = edit effective date, `effective_end` = deletion date. |
-| `ref_mue` | Both settings, MUE value, adjudication indicator and rationale. |
-| `ref_hcris` | One row per cost report: CCN, NPI, state, facility type, FY dates, total costs, total charges, hospital-wide cost-to-charge ratio, beds. `is_primary` marks the report to use when one period is filed twice. |
-| `ref_anesthesia_cf` | Anesthesia CF per locality (non-QP standard, QP kept for reference). |
-| `ref_ipps_drg` | MS-DRG weights from the correction-notice Table 5 (10% cap applied), titles, GMLOS/AMLOS. FY runs Oct 1 – Sep 30. |
-| `ref_ccn_npi` | All CCN–NPI pairs: main NPI per Hospital Enrollment, the Additional NPIs file, NPPES other identifiers (type 05/06), and NPPES hospital NPIs (taxonomy 28*) at the same zip + street address (`address_zip`) or the same legal/DBA name (`name_zip`, or `name_city` for a wrong zip) as an enrollment, plus reviewed pairs from `config/ccn_npi_manual.csv` (`manual`, only rows with approved = Y). The verify report puts each Ohio hospital NPI in a category (`federal`, `not_hospital`, `stale`, `hospital`); the < 5 % target counts the `hospital` NPIs. It also writes `data/reports/ccn_npi_ohio_suggestions.csv` with likely CCNs to review. `match_source` says which. Leading zeros of CCNs restored. Verify reports Ohio 282N* hospital NPIs with no CCN (target < 5 % for acute care) and writes the list to `data/reports/ccn_npi_ohio_unmatched.csv`. |
-| `ref_code_specialty` | One row per code × Medicare specialty × NPPES taxonomy, from CY2024 utilization. `plausible` = specialty has ≥ 1 % of national services for the code or is in the top 10 (`min_share`, `top_n` in `config/sources.yaml`). Query: `specialty_plausible('27447')`. 10 spot checks in the verify report. No CPT descriptions stored. |
-| `ref_clfs` | Lab fee schedule national limit per HCPCS + modifier (`clfs_rate()`). The rate column is `RATE` or, in CY2024 Q1–Q3, `RATE2024`. |
-| `ref_dmepos`, `ref_dmepos_rural_zip` | DMEPOS fee per HCPCS × modifiers × state, non-rural and rural; `dmepos_fee(code, dos, state, p_zip)` picks the rural fee for a rural zip. |
-| `ref_ambulance`, `ref_zip_locality` | Ambulance amounts per carrier × locality × HCPCS (urban, rural, super rural, rural miles 1–17); `ambulance_rate(code, dos, zip)` uses the zip's rural indicator. |
-| `ref_anesthesia_base_units` | Base units per anesthesia code; `anesthesia_payment(code, minutes, dos)` = (base + minutes / 15) × CF. |
-| `ref_ipps_hospital` | One row per CCN from the correction-notice Impact File: wage index, COLA, GAF, IME, DSH, uncompensated care, VBP/readmission proxies, quality/EHR flags. Adds the national rates from Tables 1A/1B/1D (set in `config/sources.yaml`), picked by wage index and quality/EHR status, and `operating_base_rate` = labor x wage index + nonlabor x COLA. |
+| A percentage of billed charges | % × this line's charge. Marked **estimate (\*)**. |
+| "N % of Medicare" in the notes (OSU writes it this way) | N % × the Medicare rate of this line. The dollar column on that row is ignored, because it holds a factor, not a price. Marked **estimate (\*)**. |
+| An estimated amount only | That amount. Marked **estimate (\*)**. |
+| A "dollar" rate under $5 on a charge of $50 or more, and under half the Medicare rate | A factor the hospital put in the dollar column (OSU posts Cigna 0.62 this way). It is left out of the median and the insurer rate, and a flag counts the rows. |
+| An insurer that is not in `config/payer_groups.yaml` | **No insurer rate** (never another plan's rate), and a check flag asks staff to add the name. |
+| A reversal line (negative charge) | Its rates are subtracted, like its charge. |
 
-| `ref_asp` | Table 10a. One row per HCPCS per quarter from the ASP Pricing File (2026: "Medicare Part B Payment Limit File"), plus NOC drugs (no code, `price_type = 'NOC'`, 2024–2025). Reads only the Section 508 CSV in each quarter folder `ASP/<yyyy>Q<n>`; finds the header under the note lines; stops if the "Effective …" line names another quarter than the folder. Dates = the quarter. `payment_limit` is per HCPCS unit (`dosage`). |
-| `ref_ndc_hcpcs` | Table 10b. The 5 crosswalks (ASP, OPPS, AWP, NOC, PrEP) per quarter. Header names differ by year (`_2024_CODE` / `_2026_CODE`, `NDC2` / `NDC`); a map in `pipeline/ref/_asp_common.py` handles them, and an unknown header stops the load. `ndc11` = NDC without dashes (NULL for skin-substitute product IDs that are not NDCs). `bill_units_pkg` = HCPCS units per package. |
-| `ref_hcpcs_code` | HCPCS Level II quarterly file (folders `HCPCS/<yyyy>Q<n>`), 2024Q1–2026Q4. Reads the ANWEB `.xlsx` (skips the transaction and corrections reports). One row per code or modifier per quarter: long/short name, pricing indicator, coverage, BETOS, TOS, added / action / termination dates. `dose_from_description` = the unit in a drug descriptor ("1 mg"); found for about 92 % of J-codes. No CPT/CDT codes are in this file. |
+**Inpatient: the whole stay is one MS-DRG**
 
-## 8. Known gaps and assumptions (confirm before sign-off)
+| Value | How it is found |
+|---|---|
+| Insurer rate, median, p10, p90, cash | The DRG rows of the hospital's price file, by the same rules as above |
+| Medicare | `ipps_payment()`: DRG weight × the hospital's base rate, with wage index, IME, DSH, uncompensated care, VBP and readmission factors, and capital. Outliers, transfers and new-technology payments are not included. |
+| Cost | Billed total × cost-to-charge ratio |
 
-1. **History (Spec §2, §8.5): complete for 2024–2026.** Quarterly tables (MPFS, OPPS, ASC, MUE, CLFS, DMEPOS, DMEPOS rural zip, anesthesia CF) have all 12 quarters, Q1 2024 to Q4 2026. IPPS has FY2025–FY2027, HCRIS FY2023–FY2026, ambulance CY2024–CY2026. A date before 2024-01-01 returns no rate.
-2. **NPPES history.** CMS posts only the current full file. 2024–2025 come from the current file + deactivation report; monthly snapshots start now (Spec §6).
-3. **NCCI PTP** has one release (v323r0, Q4 2026). It holds every edit with its effective and deletion dates, so date queries work for 2024–2026. The deletion date is treated as the last day the edit applies (inclusive). Modifier-indicator 9 rows (deletion date = effective date) are marked `is_applicable = false` and left out of the date queries.
-4. **Zip to carrier locality, 2026.** CMS posts only the latest 2026 file (`zplc_oct2026`, updated 08/13/2026). It is used for Jan–Sep 2026 (release `2026-08`); the October 2026 ZIP5 file covers Oct–Dec 2026. 2024 and 2025 use the CMS end-of-year files for the full year.
-5. **HCRIS.** Cost-to-charge ratio = Worksheet C Part I, line 202, column 5 ÷ column 8 (set in `config/sources.yaml`), hospital-wide only (Spec §6). FY2026 has 22 reports because hospitals are still filing. The NPI column in the RPT file is empty, so table 8 does not use it.
-6. **IPPS.** FY2025 uses the interim final action impact file (court decision on the low wage index policy) and the correction-notice Table 5; FY2026 the final rule; FY2027 the correction notice. `ipps_payment()` gives the wage-adjusted operating amount (the §8.4 answer) and an estimate with IME, DSH, uncompensated care, VBP/readmission proxies, low-volume factor and capital. It leaves out outliers, transfers, new-technology add-ons and SCH/MDH hospital-specific rates.
-7. **Code specialty** uses CY2024 utilization (the data lags about 2 years; Spec §6 allows this).
-8. **Anesthesia base units** come from the CY 2022 file. CMS states they did not change for 2024–2026, so that release is open-ended.
-9. **CCN–NPI match (target < 5 %): 1 of 253 Ohio acute-care hospital NPIs without a CCN (0.4 %).** 21 pairs come from `config/ccn_npi_manual.csv` (approved = Y, with a note); 13 NPIs are in `config/ccn_npi_reclass.csv` with a category (closed, not_acute, not_hospital), a reason and a source. Rows marked "confirm" should be checked by someone who knows the Ohio hospitals. The reclass file changes only the category in `v_ccn_npi_ohio_report`.
-10. **Licensing (Spec §10).** Descriptions are stored only for HCPCS Level II codes. CPT (AMA) and CDT (ADA) descriptions are dropped. A test checks this.
-11. **Layout differences from Spec §3 and §7.** Raw files are in `D:\Datasetof CMS` (set by `MESHKOR_RAW_DIR`), not in `data/raw/`; the hash of each file or folder is in the manifests and in the verify report (§8.7). `ref_mpfs` and `ref_provider` are Parquet folders (one file per quarter / per state), not one file.
-12. **Not built yet:** §11 tables 15, 16 (PDF fee tables), 18 (IDR) and 22 (hospital price file catalog).
-13. **Spec §11 loaders (tables 17, 19, 20, 21).** `ref_geo` (HUD ZIP-COUNTY / ZIP-CBSA, 2024 Q1 – 2026 Q2; 2026 Q3 not released by HUD yet), `ref_geo_zcta_county` (Census 2020), `ref_quality_hospital` / `ref_quality_measure` / `ref_quality_asc` (Care Compare, Sep 30 2026 release), `ref_ownership` / `ref_chow` / `ref_chow_npi` (data.cms.gov, 2026-09-29), `ref_nadac` (2024–2026, dates chained from the price start) and `ref_ndc_product` / `ref_ndc_package` (FDA NDC, Oct 2026). The verify report checks them in its §11 section.
+The lines of an inpatient bill are still listed, with their charge and cost, so the reviewer can see what the stay contained.
 
-## 9. Sources loaded
+### 4.4 When the price file does not cover the date of service
 
-Downloaded October 17–19, 2026 from the CMS pages below. The verify report (`data/reports/verify_latest.md`, §8.7) is the live copy of this table, and its §3.2 checks that no raw file changed since its load. The manifests in `data/ref/_manifest/` hold the full SHA-256, file members, size and load time.
+If the hospital has a price file, but it starts after the date of service, the lines are priced **twice**:
 
-Verify result on 2026-10-19: **180 pass, 0 fail, 1 not run (table 10, optional).**
+- **basis = `service_date`:** only the values that exist for that date (Medicare, cost).
+- **basis = `estimate`:** the insurer rate and the median from the nearest file, all marked as estimates.
 
-| Table | Release | File / folder (under `D:\Datasetof CMS`) | SHA-256 (first 16) | Loaded | CMS page |
-|---|---|---|---|---|---|
-| ref_ambulance | CY2024 | AMBULANCE/2024 | 41f8221a775cac3d | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files |
-| ref_ambulance | CY2025 | AMBULANCE/2025 | c1dbbdba39fe2eb2 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files |
-| ref_ambulance | CY2026 | AMBULANCE/2026 | 41658147eac5a162 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files |
-| ref_anesthesia_base_units | CY2022 | ANESTHESIA | 9bf71b437a1061b1 | 2026-10-18 | https://www.cms.gov/medicare/payment/fee-schedules/physician/anesthesiologists-center |
-| ref_anesthesia_cf | 2024A | MPFS2024A | 55c3fb57e2377f7b | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24a |
-| ref_anesthesia_cf | 2024B | MPFS2024B | b6ba19357dca0565 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24b |
-| ref_anesthesia_cf | 2024C | MPFS2024 | 6f333a2f554ee30c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24c |
-| ref_anesthesia_cf | 2024D | MPFS2024D | 2604538d8f6b8265 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24d |
-| ref_anesthesia_cf | 2025A | MPFS2025A | 8bc4c67526656b78 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25a |
-| ref_anesthesia_cf | 2025B | MPFS2025B | 1fff318c974812d9 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25b |
-| ref_anesthesia_cf | 2025C | MPFS2025C | c50de068a8263312 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25c |
-| ref_anesthesia_cf | 2025D | MPFS2025 | 5f5c944453462828 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25d-0 |
-| ref_anesthesia_cf | 2026A | MPFS2026A | 6eacf966b1e740d9 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26a |
-| ref_anesthesia_cf | 2026B | MPFS2026B | 8aea553288e44804 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26b |
-| ref_anesthesia_cf | 2026C | MPFS2026C | c7fe4e5b4bbb9499 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26c |
-| ref_anesthesia_cf | 2026D | MPFS | 51afbeb853bce73c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26d |
-| ref_asc | 2024Q1 | ASC2024A | 2608a7ca655217f9 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2024Q2 | ASC2024B | 00b7a5125f6e40ff | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2024Q3 | ASC2024C | 8ac759d830f72cda | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2024Q4 | ASC2024 | 33b68627f4886baa | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2025Q1 | ASC2025A | 8c57e464f81c2091 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2025Q2 | ASC2025B | 92c35a8b7e6211e8 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2025Q3 | ASC2025C | f83806c69a3a35e1 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2025Q4 | ASC2025 | 265ebba2496d31ca | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2026Q1 | ASC2026A | 51f77275e93877a9 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2026Q2 | ASC2026B | 74ccae7b4005208f | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2026Q3 | ASC2026C | 833cb837897eb290 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_asc | 2026Q4 | ASC | af16cc05f7a46296 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/ambulatory-surgical-center-asc/asc-payment-rates-addenda |
-| ref_ccn_npi | 2026-07 | ENROLLMENTS | c09f7db4dfbc2e8a | 2026-10-19 | https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/hospital-enrollments |
-| ref_clfs | 2024Q1 | CLFS/2024Q1 | 180b90dff4386b2e | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq1 |
-| ref_clfs | 2024Q2 | CLFS/2024Q2 | d178ce7cd501885b | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq2 |
-| ref_clfs | 2024Q3 | CLFS/2024Q3 | c4d9c87d8edbcd8f | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq3 |
-| ref_clfs | 2024Q4 | CLFS/2024Q4 | a95268fa972965ef | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/24clabq4 |
-| ref_clfs | 2025Q1 | CLFS/2025Q1 | 3a6ae381501ee77a | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq1 |
-| ref_clfs | 2025Q2 | CLFS/2025Q2 | 97b70c0d1b46d71c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq2 |
-| ref_clfs | 2025Q3 | CLFS/2025Q3 | 166efc2b2ddddf11 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq3 |
-| ref_clfs | 2025Q4 | CLFS/2025Q4 | f133417147f4c942 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/25clabq4 |
-| ref_clfs | 2026Q1 | CLFS/2026Q1 | 5be760b9fc8660c5 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq1 |
-| ref_clfs | 2026Q2 | CLFS/2026Q2 | 43c81064de5bf84a | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq2 |
-| ref_clfs | 2026Q3 | CLFS/2026Q3 | 179e916d69121b89 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq3 |
-| ref_clfs | 2026Q4 | CLFS/2026Q4 | 36e3ee8769971686 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/clinical-laboratory-fee-schedule-clfs/files/26clabq4 |
-| ref_code_specialty | CY2024 | UTILIZATION | 0893456869f155e0 | 2026-10-18 | https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners/medicare-physician-other-practitioners-by-provider-and-service |
-| ref_dmepos | 2024A | DMEPOS/2024A | a8c8018778cebb5e | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-a |
-| ref_dmepos | 2024B | DMEPOS/2024B | 52997b1ee2bf8e83 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-b |
-| ref_dmepos | 2024C | DMEPOS/2024C | 77ee941845a5a23a | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-c |
-| ref_dmepos | 2024D | DMEPOS/2024D | bab7fd9782ea6604 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-d |
-| ref_dmepos | 2025A | DMEPOS/2025A | 9c9d9d0584b1ee9c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-a |
-| ref_dmepos | 2025B | DMEPOS/2025B | 33454976cd03f9cd | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-b |
-| ref_dmepos | 2025C | DMEPOS/2025C | 8005fbc76747ae80 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-c |
-| ref_dmepos | 2025D | DMEPOS/2025D | e0fbe6dcdb1c76ac | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-d |
-| ref_dmepos | 2026A | DMEPOS/2026A | ba175cc113bf2a57 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-a |
-| ref_dmepos | 2026B | DMEPOS/2026B | 5b65b9f15a0c6f55 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-b |
-| ref_dmepos | 2026C | DMEPOS/2026C | d367d30b6d036dfe | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-c |
-| ref_dmepos | 2026D | DMEPOS/2026D | b87e69dda8d536c7 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-d |
-| ref_dmepos_rural_zip | 2024A | DMEPOS/2024A | a8c8018778cebb5e | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-a |
-| ref_dmepos_rural_zip | 2024B | DMEPOS/2024B | 52997b1ee2bf8e83 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-b |
-| ref_dmepos_rural_zip | 2024C | DMEPOS/2024C | 77ee941845a5a23a | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-c |
-| ref_dmepos_rural_zip | 2024D | DMEPOS/2024D | bab7fd9782ea6604 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme24-d |
-| ref_dmepos_rural_zip | 2025A | DMEPOS/2025A | 9c9d9d0584b1ee9c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-a |
-| ref_dmepos_rural_zip | 2025B | DMEPOS/2025B | 33454976cd03f9cd | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-b |
-| ref_dmepos_rural_zip | 2025C | DMEPOS/2025C | 8005fbc76747ae80 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-c |
-| ref_dmepos_rural_zip | 2025D | DMEPOS/2025D | e0fbe6dcdb1c76ac | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme25-d |
-| ref_dmepos_rural_zip | 2026A | DMEPOS/2026A | ba175cc113bf2a57 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-a |
-| ref_dmepos_rural_zip | 2026B | DMEPOS/2026B | 5b65b9f15a0c6f55 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-b |
-| ref_dmepos_rural_zip | 2026C | DMEPOS/2026C | d367d30b6d036dfe | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-c |
-| ref_dmepos_rural_zip | 2026D | DMEPOS/2026D | b87e69dda8d536c7 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/dmepos/dmepos-fee-schedule/dme26-d |
-| ref_hcris | FY2023 | HCRIS/HOSP10FY2023 | c66a0f1683596338 | 2026-10-17 | https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year |
-| ref_hcris | FY2024 | HCRIS/HOSP10FY2024 | f288f704f227c0b2 | 2026-10-17 | https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year |
-| ref_hcris | FY2025 | HCRIS/HOSP10FY2025 | 5aca20a2c5d3f540 | 2026-10-17 | https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year |
-| ref_hcris | FY2026 | HCRIS/HOSP10FY2026 | de7fbd886285fe67 | 2026-10-17 | https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year |
-| ref_ipps_drg | FY2025 | IPPS/FY2025/fy2025-ipps-final-rule-and-correction-notice-table-5.zip | d5e0a0bd231412e1 | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2025-ipps-final-rule-home-page |
-| ref_ipps_drg | FY2026 | IPPS/FY2026/cms-1833-f-table-5.zip | 14dba6b8f06ab819 | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2026-ipps-final-rule-home-page |
-| ref_ipps_drg | FY2027 | IPPS/FY2027/cms-1849-fr-and-cn-table-5.zip | 3b43654767907b1c | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2027-ipps-final-rule-home-page |
-| ref_ipps_hospital | FY2025 | IPPS/FY2025/fy_2025_ipps_impact_file-fr-cn-ifc.zip | 1b650a7f96eef459 | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2025-ipps-final-rule-home-page |
-| ref_ipps_hospital | FY2026 | IPPS/FY2026/fy_2026_ipps_final_rule_impact_file.zip | c19ae04778a7018f | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2026-ipps-final-rule-home-page |
-| ref_ipps_hospital | FY2027 | IPPS/FY2027/fy-2027-ipps-fr-cn-impact-file.zip | 6e51b1015b6c5c93 | 2026-10-18 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/fy-2027-ipps-final-rule-home-page |
-| ref_mpfs | 2024A | MPFS2024A | 55c3fb57e2377f7b | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24a |
-| ref_mpfs | 2024B | MPFS2024B | b6ba19357dca0565 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24b |
-| ref_mpfs | 2024C | MPFS2024 | 6f333a2f554ee30c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24c |
-| ref_mpfs | 2024D | MPFS2024D | 2604538d8f6b8265 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24d |
-| ref_mpfs | 2025A | MPFS2025A | 8bc4c67526656b78 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25a |
-| ref_mpfs | 2025B | MPFS2025B | 1fff318c974812d9 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25b |
-| ref_mpfs | 2025C | MPFS2025C | c50de068a8263312 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25c |
-| ref_mpfs | 2025D | MPFS2025 | 5f5c944453462828 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu25d-0 |
-| ref_mpfs | 2026A | MPFS2026A | 6eacf966b1e740d9 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26a |
-| ref_mpfs | 2026B | MPFS2026B | 8aea553288e44804 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26b |
-| ref_mpfs | 2026C | MPFS2026C | c7fe4e5b4bbb9499 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26c |
-| ref_mpfs | 2026D | MPFS | 51afbeb853bce73c | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26d |
-| ref_mpfs_locality | 2026D | MPFS | 51afbeb853bce73c | 2026-10-17 | https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26d |
-| ref_mue | 2024Q1/hospital | MUE2024A/hospital | 76d6075fc988e138 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q1/practitioner | MUE2024A/practitioner | 2d670114795fa732 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q2/hospital | MUE2024B/hospital | 19b60926d0e1d6ec | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q2/practitioner | MUE2024B/practitioner | 4478e01e6208ca8b | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q3/hospital | MUE2024C/hospital | 65098cb1292d498f | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q3/practitioner | MUE2024C/practitioner | 06b9378e968b349c | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q4/hospital | MUE2024/hospital | 58da99490a301a85 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2024Q4/practitioner | MUE2024/practitioner | 4205f956af329093 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q1/hospital | MUE2025A/hospital | aafdacf073fd63e9 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q1/practitioner | MUE2025A/practitioner | 86ce15fce2cd42ec | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q2/hospital | MUE2025B/hospital | 3097c3df389807f3 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q2/practitioner | MUE2025B/practitioner | fb97746498c8166c | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q3/hospital | MUE2025C/hospital | 35ae92a8e89f9ad0 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q3/practitioner | MUE2025C/practitioner | 1679c026f8a8cbec | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q4/hospital | MUE2025/hospital | 5a6593e69c8fba7b | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2025Q4/practitioner | MUE2025/practitioner | 90acec749e1f03f5 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q1/hospital | MUE2026A/hospital | 0ffee7f6d05a694c | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q1/practitioner | MUE2026A/practitioner | 96543e747e763d72 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q2/hospital | MUE2026B/hospital | 79a93446622b2582 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q2/practitioner | MUE2026B/practitioner | 2e504c35d76c301c | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q3/hospital | MUE2026C/hospital | 49a57f35234feeea | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q3/practitioner | MUE2026C/practitioner | c3ae164122f0f901 | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edit-mue-archive |
-| ref_mue | 2026Q4/hospital | NCCI/facilityoutpatienthospitalservicesmuetable-effective-10-01-2026 | f174b39ddcaf08fe | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edits |
-| ref_mue | 2026Q4/practitioner | NCCI/practitionerservicesmuetable-effective-10-01-2026 | e165bcd1e39ee0db | 2026-10-19 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-medically-unlikely-edits |
-| ref_ncci_ptp | 2026Q4/hospital | NCCI/PTP/ccioph-v323r0-f1.zip | fdf7651190e17f60 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/hospital | NCCI/PTP/ccioph-v323r0-f2.zip | 5f39fb6295824ad7 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/hospital | NCCI/PTP/ccioph-v323r0-f3.zip | e323c7c723c9a8ba | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/hospital | NCCI/PTP/ccioph-v323r0-f4.zip | 0e731c4c0f5a2150 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/practitioner | NCCI/PTP/ccipra-v323r0-f1.zip | 40adc15de0b5cf94 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/practitioner | NCCI/PTP/ccipra-v323r0-f2.zip | e0c916cc5b0bf1b7 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/practitioner | NCCI/PTP/ccipra-v323r0-f3.zip | 79024324e5f2ac96 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_ncci_ptp | 2026Q4/practitioner | NCCI/PTP/ccipra-v323r0-f4.zip | 028a6d91e27ab177 | 2026-10-17 | https://www.cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits/medicare-ncci-procedure-procedure-ptp-edits |
-| ref_opps | 2024Q1 | OPPS2024A | cd0094a6114f2d05 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2024Q2 | OPPS2024B | 4175fce3d363bd24 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2024Q3 | OPPS2024C | 0f51593ebf1f2f07 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2024Q4 | OPPS2024 | a5500da0c2ce1066 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient/addendum-a-b-updates/october-2024-updated-10/02/2024-0 |
-| ref_opps | 2025Q1 | OPPS2025A | 5f7ed650a467ce9e | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2025Q2 | OPPS2025B | 033b02a032543976 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2025Q3 | OPPS2025C | 296e0e00061a0379 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2025Q4 | OPPS2025 | c044636bbb871017 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates/october-2025-addendum-b |
-| ref_opps | 2026Q1 | OPPS2026A | 7a15f0ecd0280cd3 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2026Q2 | OPPS2026B | 25b666a7023c190b | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2026Q3 | OPPS2026C | 8dc631d3dce30ee3 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates |
-| ref_opps | 2026Q4 | OPPS | 0b2483f46bd2fe93 | 2026-10-19 | https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient-pps/quarterly-addenda-updates/october-2026-addendum-b |
-| ref_provider | 2026-10 | NPES | b22e2fac1cef4575 | 2026-10-17 | https://download.cms.gov/nppes/NPI_Files.html |
-| ref_provider | 2026-10 | NPES/NPPES Deactivated NPI Report 20261012.xlsx | 0552b3192932726c | 2026-10-17 | https://download.cms.gov/nppes/NPI_Files.html |
-| ref_zip_locality | 2024EOY | AMBULANCE/2024 | 41f8221a775cac3d | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance |
-| ref_zip_locality | 2025EOY | AMBULANCE/2025 | c1dbbdba39fe2eb2 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance |
-| ref_zip_locality | 2026-08 | ZIPLOC/2026 | a2060fccf48a1bed | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules |
-| ref_zip_locality | 2026Q4 | AMBULANCE/2026 | 41658147eac5a162 | 2026-10-19 | https://www.cms.gov/medicare/payment/fee-schedules/ambulance |
+The totals, the report, the PDF and the CSV then use the **estimate** basis (`totals.basis = "estimate"`), with every insurer value marked as an estimate and the limits text saying so. The reviewer can switch between the two on the Review page, and a flag explains why.
+
+### 4.5 Totals and coverage
+
+- A total adds up **only the lines that have a value**.
+- `totals.coverage` gives the billed dollars and the share of the bill those lines cover. When it is under 100 %, the report's "% of billed" compares the total with the billed charges of the **same lines**, and a note under the benchmark says so ("4 of 11 lines, 61 % of billed charges; the % compares those lines only"). A benchmark on less than half of the billed charges (for example a cash price posted on one lab line) is listed without a percentage, marked "not comparable with the bill". The summary sentence, the table, the PDF and the screen all use this same rule.
+- A law firm user sees the values, lines and report **only after release**. Before that, the case shows progress only.
+
+### 4.6 Which payers count in the median (decided October 26, 2026)
+
+The median and the 10th/90th percentiles use **commercial insurers only**: employer and individual plans, ACA exchange plans, PPO networks and TPAs. **Left out:** Medicare, Medicare Advantage, Medicaid, other government plans, workers' comp and self-pay. Medicare has its own benchmark line, so counting government rates in the median too would mix two different benchmarks.
+
+- The list of excluded groups is `NOT_COMMERCIAL` in `pipeline/lien/price.py`. Which group a plan belongs to comes from `config/payer_groups.yaml` and is worked out again on every pricing run, so a rule change there applies at once.
+- ACA exchange plans (for example "CareSource - Exchange", "Buckeye Ambetter Exchange") have their own group, `ACA Exchange`, and count as commercial.
+- The **patient's own insurer rate** is not affected: a Medicare Advantage patient still gets their own plan's rate in the insurer line.
+- Example, OSU, MS-DRG 481: 43 posted rates; 16 government plans left out; median of the 27 commercial rates **$61,642.56** (all 43: $42,572.81).
+- Many commercial contracts are a percentage of billed charges; for those the hospital's own dollar estimate is used, which follows its list prices. The report's limits text says so.
+
+### 4.7 The insurer's EOB (`eob.py`)
+
+An EOB (Explanation of Benefits) is the insurer's statement for the claim: per service, what the hospital **billed**, what the insurer **allowed** (its contract amount), what it **paid**, and the **patient's share** (deductible, copay, coinsurance). For a lien, "allowed" is the strongest fact: the insurer's own price for this very claim.
+
+1. **Read.** The same files as bills (text PDF, scan, photo by OCR, Word). The column header line ("Billed  Allowed  Deductible … Plan paid  You owe") says which amount is which, so insurers that print the columns in another order are read too. A "Total" line is used as a check. Header: insurer, plan, claim number, provider, dates of service. **Member name and ID are not stored.**
+2. **Match** each EOB line to a bill line: same date and code (CPT/HCPCS, else revenue code), then same charge. An inpatient EOB that shows the stay as one line (`DRG 481`) is compared by its totals only.
+3. **Store:** `Case.eob` (totals and claim facts) and `eob_allowed`, `eob_paid`, `eob_patient` on each matched line.
+4. **Report:** two rows after "Billed": *Allowed by &lt;insurer&gt; for this claim (EOB)* and *Paid by &lt;insurer&gt; (EOB)*, a sentence in the summary, an "Allowed (EOB)" column, the EOB in the sources, and EOB values in the CSV.
+5. **Flags** (reviewer): EOB read (info) · read by OCR · lines that do not add up to the EOB's own total · EOB billed total differs from the bill · EOB from another insurer · dates that do not overlap · a different MS-DRG · bill lines not on the EOB, EOB lines not on the bill · lines allowed at $0 (info) · allowed 10 % or more away from the hospital's posted rate on the same lines (info).
+6. **A bad EOB never stops the case.** If it cannot be read (or is not an EOB), the bill is priced anyway and a check flag gives the reason.
+
+Test EOBs: `tests\fixtures\test_eobs\` (Anthem line by line, Medical Mutual with another column order, UnitedHealthcare inpatient by DRG), made by `python tests\fixtures\make_test_eobs.py`. Real EOB layouts will need tuning of `COLUMNS` and `LINE_RX` in `eob.py`, the same way as bills.
+
+---
+
+## 5. Where the numbers come from (reference data)
+
+All reference data is **free public data**. The pipeline loads each file into a Parquet table, then copies every table into **one DuckDB file** (`data/meshkor.duckdb`). The pricing step reads that file read-only.
+
+### 5.1 CMS tables (Step 1)
+
+| Table | What it is | Used for |
+|---|---|---|
+| `ref_opps` | Medicare outpatient rates (OPPS Addendum B), per quarter | Medicare value of outpatient lines |
+| `ref_ipps_drg`, `ref_ipps_hospital` | Inpatient DRG weights and per-hospital factors (wage index, IME, DSH, cost-to-charge) | Medicare value of a stay; wage index for OPPS |
+| `ref_mpfs`, `ref_mpfs_locality` | Physician Fee Schedule | Therapy and other lines paid under MPFS |
+| `ref_clfs` | Clinical Lab Fee Schedule | Lab lines |
+| `ref_asp`, `ref_ndc_hcpcs` | Part B drug payment limits; NDC ⇄ HCPCS | Drug lines |
+| `ref_hcris` | Hospital cost reports | Cost-to-charge ratio, cost column |
+| `ref_ccn_npi`, `ref_provider` | Hospital enrollments, NPPES | Finding the hospital |
+| `ref_msdrg*` | MS-DRG definitions V41–V44 (titles, diagnoses, CC/MCC) | DRG title and checks |
+| `ref_hcpcs_code` | HCPCS Level II codes | Code names |
+| `ref_ncci_ptp`, `ref_mue` | NCCI edits | Coding checks (planned) |
+| `ref_asc`, `ref_dmepos`, `ref_ambulance`, `ref_anesthesia_*`, `ref_geo*`, `ref_quality_*`, `ref_ownership`, `ref_chow*`, `ref_nadac`, `ref_ndc_*` | Other CMS / FDA / HUD tables | Other bill types and later features |
+
+History is loaded for **2024 to 2026** (all quarters), so a 2024 bill is priced with the 2024 rates.
+
+The latest verify report (`data/reports/verify_latest.md`) shows **245 pass, 0 fail**.
+
+### 5.2 Hospital price files (Step 2)
+
+Since 2021, every US hospital must publish a **machine-readable file** (45 CFR 180) with its negotiated rates for every payer and plan. These files are the source of the insurer rate, the median and the cash price.
+
+| Hospital | CCN | State |
+|---|---|---|
+| Ohio State University Hospitals | 360085 | Loaded (2,366,510 rows, file dated 2026-07-01) |
+| Arthur G James Cancer Hospital | 360242 | Loaded (4,470,209 rows, file dated 2026-07-01) |
+| Miami Valley Hospital | 360051 | To download (JSON layout) |
+| Cleveland Clinic Hospital | 360180 | To download (large CSV) |
+
+The loader `pipeline/ref/hospital_mrf.py` reads all 3 CMS template layouts (CSV "tall", CSV "wide", JSON) into one table, `ref_hospital_mrf`. One hospital × one download month is one release. The progress of each hospital is in `data/reports/hpt_progress.md`.
+
+### 5.3 How data flows into the DuckDB file
+
+```
+Raw downloads (one folder per release, never edited)      MESHKOR_RAW_DIR
+        │   load_ref <table>        one loader per table in pipeline/ref/
+        ▼
+data/ref/<table>.parquet   +  data/ref/_manifest/<table>.json   (rows, hashes, warnings)
+        │   build_duckdb            copies every table, adds views and macros from sql/views.sql
+        ▼
+data/meshkor.duckdb
+        │   verify_step1            row counts, hashes, golden values
+        ▼
+data/reports/verify_latest.md
+```
+
+`sql/views.sql` holds the SQL helpers the pricing step uses, for example `opps_wage_adjusted()`, `ipps_payment()`, `clfs_rate()`, `mpfs_rate()`, `asp_price()`, `mrf_rate()`, `mrf_drg()`, `msdrg_title()` and `v_hcris_latest`. Each one starts with a `-- @stmt <name>:` line.
+
+---
+
+## 6. Repository layout
+
+```
+backend/                      Django project
+  meshkor/                    settings.py (reads .env), urls.py
+  accounts/                   Firm, Profile (role), e-mail login, JWT views, create_portal_user
+  cases/                      the portal itself
+    models.py                 Case, CaseFile, CaseLine, Flag, Stay, Feedback, AuditEntry
+    views.py, urls.py         every /api/cases/... endpoint, firms, audit
+    serializers.py            JSON shapes (match docs/API_CONTRACT.md)
+    storage.py                Fernet encryption of bills and EOBs
+    processing.py             the one hook into the pricing step
+    reports.py                report data, PDF (reportlab) and CSV
+    audit.py                  writes one audit row; never breaks a request
+    tests.py, tests_lien.py   API tests and pricing tests
+    lien_testdb.py            small DuckDB for the pricing tests
+    management/commands/      try_bill, reprocess_case
+  refdata/                    LoadRun, SourceFile, VerifyRun; /api/data-sources/;
+                              commands load_ref, build_duckdb, verify_step1, step1_status, check_raw
+pipeline/
+  lien/                       pricing step: reader, match, price, intake, db
+  ref/                        one loader per reference table (incl. hospital_mrf.py)
+  hpt/                        hospital price files: find, download, intake, verify, quality, progress
+  common/                     config, lineage columns, raw-file access, output writer
+  runner.py, duckdb_build.py, verify.py
+config/
+  sources.yaml                releases for the test fixtures
+  sources_local.yaml          releases on the build PC (set MESHKOR_SOURCES=sources_local.yaml)
+  payer_groups.yaml           insurer name → payer group (edit here, never in code)
+  ccn_npi_manual.csv, ccn_npi_reclass.csv   reviewed hospital ⇄ NPI pairs
+  hospital_sites.csv, hospital_taxonomies.yaml, hpt_tiers.csv   hospital price-file work list
+sql/views.sql                 views and macros added to DuckDB by build_duckdb
+data/                         reference data (Parquet, DuckDB) – NOT in Git, except manifests and reports
+  ref/_manifest/              one JSON per table: sources, hashes, row counts
+  reports/                    verify reports, download checks, progress
+docs/                         detailed guides (see section 14)
+tests/                        pytest tests for the pipeline; fixtures (trimmed real files + synthetic test bills)
+tools/                        hpt_one.ps1 (one hospital start to finish), patch_views_sql.py
+check_project.py              is all the data for the lien report here?
+check_downloads.ps1           are the raw downloads complete and unchanged?
+register.py                   builds data_register.xlsx (every release, file and table)
+load_msdrg.py, verify_msdrg.py, register_msdrg.py   MS-DRG loader (standalone for now)
+```
+
+---
+
+## 7. Set up on a new PC (Windows)
+
+**You need:** Python 3.10 or later (3.13 is tested), PostgreSQL 16 or later (17 is tested), and Git. For the website you also need Node.js LTS (see the frontend README).
+
+### Step 1: Get the code and make a virtual environment
+
+```powershell
+cd D:\Meshkor
+git clone https://github.com/OneSmarterInc/Meshkor_lien-valuation_backend.git meshkor-data
+cd meshkor-data
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt -r requirements-step2.txt
+```
+
+Always use `python -m pip …`. It installs into the active `.venv`.
+
+**Do not copy a `.venv` folder from another path.** A venv works only in the folder where it was made. If you see `Fatal error in launcher`, delete `.venv` and make it again.
+
+### Step 2: Make the database
+
+```powershell
+$psql = "C:\Program Files\PostgreSQL\17\bin\psql.exe"
+& $psql -U postgres -h localhost -c "CREATE USER meshkor WITH LOGIN PASSWORD 'choose-a-password';"
+& $psql -U postgres -h localhost -c "CREATE DATABASE meshkor OWNER meshkor;"
+```
+
+Check which port your PostgreSQL uses (`port =` in `C:\Program Files\PostgreSQL\17\data\postgresql.conf`). The default is 5432.
+
+### Step 3: Make `.env`
+
+Copy `.env.example` to `.env` in the repository root (`copy .env.example .env`) and fill in the values. It lists every setting with a short note; [section 8](#8-settings-env) explains them. The minimum is:
+
+```
+POSTGRES_DB=meshkor
+POSTGRES_USER=meshkor
+POSTGRES_PASSWORD=choose-a-password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+DJANGO_SECRET_KEY=<50 random characters>
+DJANGO_DEBUG=1
+MESHKOR_FILE_KEY=<Fernet key>
+```
+
+Make the two keys like this:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(50))"
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+**Back up `MESHKOR_FILE_KEY` somewhere safe.** If you lose it, you can never open the stored bills again. **Never commit `.env`.**
+
+### Step 4: Make the tables and the first users
+
+```powershell
+python backend\manage.py migrate
+python backend\manage.py create_portal_user --email you@meshkor.com --password "..." --role admin --name "Your Name"
+python backend\manage.py create_portal_user --email lawyer@firm.test --password "..." --role firm --firm "Test Law Firm" --name "Test Lawyer"
+python backend\manage.py createsuperuser        # optional: for http://localhost:8000/admin/
+```
+
+### Step 5: Get the reference data
+
+The DuckDB file is too big for Git (about 1.6 GB). Either copy `data\` from the build PC, or build it from the raw downloads:
+
+```powershell
+# in .env:  MESHKOR_RAW_DIR=<folder with the CMS downloads>   and   MESHKOR_SOURCES=sources_local.yaml
+python backend\manage.py load_ref all
+python backend\manage.py build_duckdb
+python backend\manage.py verify_step1          # expect 0 fail in data\reports\verify_latest.md
+```
+
+---
+
+## 8. Settings (`.env`)
+
+`backend/meshkor/settings.py` reads `.env` from the repository root. A real environment variable wins over the same line in `.env`.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `DB_ENGINE` | `postgresql` | Set to `sqlite` only to run the tests quickly (see section 11). |
+| `POSTGRES_DB` / `DB_NAME` | `meshkor` | Database name |
+| `POSTGRES_USER` / `DB_USER` | `meshkor` | Database user |
+| `POSTGRES_PASSWORD` / `DB_PASSWORD` | – | Database password |
+| `POSTGRES_HOST` / `DB_HOST` | `localhost` | Database server |
+| `POSTGRES_PORT` / `DB_PORT` | `5432` | Database port |
+| `DJANGO_SECRET_KEY` | dev value | **Must be set (50+ characters).** Signs the login tokens. |
+| `DJANGO_DEBUG` | `0` | `1` on a developer PC only |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Host names the server answers to |
+| `DJANGO_SECURE` | `0` | `1` on a server behind HTTPS: secure cookies, HSTS, HTTPS redirect, and a hard stop if `DJANGO_SECRET_KEY` is missing |
+| `MESHKOR_FILE_KEY` | – | **Must be set.** Fernet key that encrypts bills and EOBs. Back it up. |
+| `MESHKOR_DATA_ROOT` | `<repo>/data` | Where Parquet, DuckDB and reports live |
+| `MESHKOR_UPLOAD_DIR` | `<data>/uploads` | Where the encrypted bills live. Keep it outside the repository on a server. |
+| `MESHKOR_RAW_DIR` | `<data>/raw` | Folder with the raw CMS downloads |
+| `MESHKOR_SOURCES` | `sources.yaml` | `sources_local.yaml` on the build PC |
+| `MESHKOR_PRICING` | `thread` | Who prices a new upload. `thread`: the web server, in the background (nothing else to run). `worker`: the web server only queues; run `pricing_worker` too (live server with more than one web process). `inline`: the upload waits (the tests use this). |
+| `MESHKOR_PRICING_THREADS` | `2` | How many bills are priced at the same time in `thread` mode. OCR uses a lot of CPU. |
+| `MESHKOR_FOUR_EYES` | `0` | `1` = a different reviewer must approve a case whose flags you resolved |
+| `MESHKOR_PORTAL_URL` | `http://localhost:5173` | Link in the "report ready" email |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,…` | Website addresses allowed to call the API (production) |
+| `JWT_ACCESS_MINUTES` / `JWT_REFRESH_HOURS` | `30` / `12` | How long a sign-in lasts |
+| `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | console | Email for "report ready". The console backend prints the email in the server window. |
+
+---
+
+## 9. Run the portal
+
+You need **2 PowerShell windows**.
+
+**Window 1: backend**
+
+```powershell
+cd D:\Meshkor\meshkor-data
+.\.venv\Scripts\Activate.ps1
+python backend\manage.py runserver 8000
+```
+
+Leave it open. If it stops by itself without a message, run it with `--noreload` to see the error.
+
+**Window 2: website** (see the frontend README)
+
+```powershell
+cd D:\Meshkor\lien-portal-frontend
+npm run dev
+```
+
+Open **http://localhost:5173** and sign in.
+
+**Try it end to end:**
+
+1. Sign in as the firm user. Upload `tests\fixtures\test_bills\B01_TEST_bill.pdf`, tick consent and send.
+2. Sign in as the reviewer. Open **Cases → MK-…**, resolve the flags, then **Approve and send**.
+3. Sign in as the firm user. The case shows **Ready**. Download the PDF and the CSV.
+
+**Check the server without the website:** http://localhost:8000/api/health/ answers `{"status": "ok"}`.
+
+---
+
+## 10. Commands you will use
+
+All of these run from the repository root, with `.venv` active.
+
+### Portal
+
+| Command | What it does |
+|---|---|
+| `python backend\manage.py runserver 8000` | Starts the API on port 8000 |
+| `python backend\manage.py create_portal_user --email … --password … --role firm\|reviewer\|admin [--firm "…"] [--name "…"]` | Makes or updates a user |
+| `python backend\manage.py try_bill <bill.pdf> [--payer "…"] [--ccn …] [--drg …]` | Reads and prices one bill PDF and prints the lines, totals and flags. **It writes nothing.** Use it to test a new bill layout or a new price file. |
+| `python backend\manage.py pricing_worker` | Prices the waiting uploads; keeps running. Only needed with `MESHKOR_PRICING=worker`. More than one is safe. |
+| `python backend\manage.py pricing_worker --once` | Prices what is waiting now (also cases a server stop left in Processing), then stops |
+| `python backend\manage.py reprocess_case MK-2026-0007` | Prices a case again, for example after a missing price file was loaded |
+| `python backend\manage.py reprocess_case --status no_price_file` | Prices every case in that status again. Sent cases are never touched. |
+
+### Reference data
+
+| Command | What it does |
+|---|---|
+| `python backend\manage.py load_ref all` (or `load_ref ref_opps ref_clfs`) | Loads tables from the raw downloads into Parquet |
+| `python backend\manage.py load_ref ref_hospital_mrf` | Loads the hospital price files listed in `sources_local.yaml` |
+| `python backend\manage.py build_duckdb` | Rebuilds `data\meshkor.duckdb` from all Parquet. Close every other program that has the file open first. |
+| `python backend\manage.py verify_step1` | Runs the checks and writes `data\reports\verify_latest.md` |
+| `python backend\manage.py step1_status` | Latest load run per table |
+| `python check_project.py` | Is all the data the lien report needs present? Writes `data\reports\check_project.md` |
+| `.\check_downloads.ps1` | Are the raw downloads complete and unchanged? |
+| `python register.py` | Rebuilds `data_register.xlsx` |
+| `.\tools\hpt_one.ps1 -Ccn 360051 -Period 2026-11 -File "<downloaded file>" -Page "<hospital page>"` | One hospital price file, start to finish: intake → load → build → verify → quality → progress |
+
+---
+
+## 11. Tests
+
+**Portal and pricing tests (36):** these tests use a temporary SQLite database, so they never touch your PostgreSQL data:
+
+```powershell
+$env:DB_ENGINE="sqlite"
+python backend\manage.py test cases accounts
+Remove-Item Env:DB_ENGINE          # back to PostgreSQL in this window
+```
+
+They cover login and tokens, firm isolation, upload rules, encryption, review → approve → download → feedback, the DRG change, and the pricing of the synthetic bills. The pricing checks include insurer rate, median, Medicare, cost, J1 packaging, % of Medicare, the inpatient DRG, the estimate basis and the hospital match.
+
+**Pipeline tests (59):** these use trimmed real CMS files in `tests\fixtures\raw` and need no downloads:
+
+```powershell
+python -m pytest -q tests
+```
+
+**On real data:**
+
+```powershell
+python backend\manage.py try_bill tests\fixtures\test_bills\B01_TEST_bill.pdf
+```
+
+The 4 files in `tests\fixtures\test_bills\` are **synthetic test bills**. They have no real patient and no real visit, and each page says so.
+
+To test on PostgreSQL instead of SQLite, the database user needs the right to make a test database (`ALTER USER meshkor CREATEDB;`). Then run the tests without `DB_ENGINE`.
+
+---
+
+## 12. Security and PHI rules
+
+Bills and EOBs contain **protected health information (PHI)**. These rules are not optional:
+
+1. **Never put a real bill, EOB or patient file in Git**, in `data\`, in a test folder or in an email. `.gitignore` blocks PDF files, `uploads/`, `bills/`, `.env` and the data files, but check `git status` before every commit anyway.
+2. **Use only the synthetic test bills for testing** until the server is set up for production.
+3. **Uploads are encrypted** with `MESHKOR_FILE_KEY` (Fernet: AES-128 + HMAC). The database never holds the file bytes.
+4. **Keep `MESHKOR_FILE_KEY` and `DJANGO_SECRET_KEY` secret and backed up.** Never in Git, never in a chat.
+5. **Everyone gets their own account.** Do not share logins, because the audit log names the person.
+6. **Password guessing is slowed down** (`accounts/throttle.py`). After 5 wrong passwords in 15 minutes for one email from one computer, that computer must wait 15 minutes for that email (answer `429` with "Try again in N minutes"). One computer failing 20 times on any accounts, or one email failing 50 times from any computers, is also blocked. The owner signing in from another computer is not affected, and a correct password clears the count. Every block is written to the audit log.
+7. **Firm isolation is in the API.** Do not add an endpoint that returns cases without `visible_cases(user)`.
+8. **For production:** HTTPS only, `DJANGO_DEBUG=0`, a real `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`, the upload folder on encrypted storage, and backups of PostgreSQL and the upload folder. Any outside service that sees PHI (OCR, email, hosting) needs a BAA.
+
+---
+
+## 13. Status, limits and next steps
+
+**Works today:**
+
+- Login and roles
+- Upload with encryption
+- Automatic pricing of text PDFs
+- Review with flags and DRG confirmation
+- Approve or send back
+- PDF and CSV report
+- Email when a report is ready
+- Audit log and data-sources page
+- 36 portal tests and 59 pipeline tests
+
+**Known limits:**
+
+| Limit | What happens today | Plan |
+|---|---|---|
+| Scanned bills and photos | Read by local OCR (RapidOCR); every OCR bill is checked by a reviewer | Test with real scans as they arrive; tune `LOOSE_RX` in `reader.py` for new layouts |
+| New bill layouts | The reader knows line lists in the order date, revenue code, code, units, description, charge | Add patterns in `reader.py` (`LINE_RX`) as real bills arrive. Test each one with `try_bill`. |
+| EOBs | Read for the 3 test layouts (section 4.7) | Test with real EOBs (no PHI in Git) and add their column names to `COLUMNS` in `eob.py` |
+| Only 2 hospitals have price files | Other hospitals go to `no_price_file` | Load Miami Valley (JSON) and Cleveland Clinic, then the other Ohio hospitals |
+| 2024–2025 price-file history | No free complete source | Use the estimate basis; archived files must be labeled as not official |
+| Inpatient Medicare | IPPS estimate without outliers or transfers | Add outlier logic and the CMS grouper if needed |
+| DRG change on the Review page | Priced again while the reviewer waits (a few seconds; an OCR bill is read again) | Keep the read lines, so only the pricing runs again |
+| PDF layout | Simple one-column report | Designed report layout |
+
+**Before going live:** a server, a domain, HTTPS, PostgreSQL backups, secrets in a vault, real email, a security review and a BAA with each vendor that sees PHI.
+
+---
+
+## 14. More documents
+
+| File | What it covers |
+|---|---|
+| `docs/API_CONTRACT.md` | Every API endpoint and JSON shape. The frontend has the same file. |
+| `docs/README-portal-api.md` | How the portal API was built, and the rules it enforces |
+| `docs/README-lien.md` | The pricing step in detail |
+| `docs/README-hpt.md` | Hospital price files: find, download, load, verify |
+| `docs/README-mrf.md` | The first price-file load (OSU) and the table columns |
+| `docs/README-msdrg.md` | MS-DRG definitions V41–V44 |
+| `docs/README-step1.md` | Step 1 CMS reference data: download folders, every loader, known gaps, every source with its hash |
+| `data/reports/verify_latest.md` | Latest check result for all reference tables |
+| `data/reports/hpt_progress.md` | Which hospitals' price files are loaded |

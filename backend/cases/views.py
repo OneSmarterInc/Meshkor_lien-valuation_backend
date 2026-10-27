@@ -53,6 +53,8 @@ class CaseList(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
+        if is_staff_role(request.user):
+            processing.resume_stuck()           # after a server restart, nothing stays stuck in "Processing"
         qs = visible_cases(request.user)
         st = request.query_params.get("status")
         if st:
@@ -62,7 +64,9 @@ class CaseList(APIView):
             qs = qs.filter(Q(case_number__icontains=q) | Q(matter_ref__icontains=q) | Q(hospital_name__icontains=q) | Q(payer_name__icontains=q))
         firm = request.query_params.get("firm")
         if firm and is_staff_role(request.user):
-            qs = qs.filter(firm_id=firm)
+            if not firm.isdigit():
+                return Response({"detail": "firm must be a number."}, status=400)
+            qs = qs.filter(firm_id=int(firm))
         pg = Page()
         page = pg.paginate_queryset(qs.order_by("-created_at"), request, view=self)
         return pg.get_paginated_response(CaseSummarySerializer(page, many=True).data)
@@ -86,7 +90,7 @@ class CaseList(APIView):
             bill = storage.save(case, "bill", d["bill"])
             eob = storage.save(case, "eob", d["eob"]) if d.get("eob") else None
         log(request.user, "Bill uploaded", f"{bill.name} · consent recorded" + (f" · EOB {eob.name}" if eob else ""), case)
-        processing.start(case, user=request.user)
+        processing.start(case, user=request.user)   # in the background: the upload answers now
         case.refresh_from_db()
         return Response(CaseSummarySerializer(case).data, status=status.HTTP_201_CREATED)
 
@@ -106,13 +110,27 @@ class CaseStats(APIView):
         })
 
 
+def _released_or_staff(request, case):
+    """Values, lines and the report are MeshKor's draft until the case is sent: firm users see them only then."""
+    if is_staff_role(request.user) or case.status == Case.Status.SENT:
+        return True
+    raise PermissionDenied("The report is available once MeshKor has released it.")
+
+
 class CaseDetail(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         case = get_case(request, pk)
         log(request.user, "Case viewed", "", case)
-        return Response(CaseDetailSerializer(case).data)
+        data = CaseDetailSerializer(case).data
+        if not is_staff_role(request.user) and case.status != Case.Status.SENT:
+            # A firm user sees progress only: no draft totals, flags or internal notes before release.
+            data["flags"], data["stay"] = [], None
+            data["totals"] = {k: None for k in data["totals"]}
+            if case.status in (Case.Status.ERROR, Case.Status.NO_PRICE_FILE):
+                data["status_detail"] = "MeshKor is looking at this bill."
+        return Response(data)
 
 
 class CaseLines(APIView):
@@ -120,6 +138,8 @@ class CaseLines(APIView):
 
     def get(self, request, pk):
         case = get_case(request, pk)
+        _released_or_staff(request, case)
+        log(request.user, "Lines viewed", "", case)
         basis = request.query_params.get("basis", "service_date")
         if basis not in ("service_date", "estimate"):
             return Response({"detail": "basis must be service_date or estimate."}, status=400)
@@ -147,16 +167,18 @@ class DrgConfirm(APIView):
         stay = getattr(case, "stay", None)
         if stay is None:
             return Response({"detail": "This case has no inpatient stay."}, status=400)
+        if case.status != Case.Status.NEEDS_REVIEW:
+            return Response({"detail": f"The DRG can be confirmed only while the case is in review (now '{case.status}')."}, status=400)
         s = DrgConfirmSerializer(data=request.data); s.is_valid(raise_exception=True)
         drg = s.validated_data["ms_drg"]
         if drg != stay.ms_drg:
             old = stay.ms_drg
             processing.reprice(case, ms_drg=drg, user=request.user)   # values for the new DRG
-            log(request.user, "DRG changed", f"MS-DRG {old or '—'} → {drg}", case)
             case.refresh_from_db()
             stay = getattr(case, "stay", None)
-            if stay is None:
+            if stay is None or case.status != Case.Status.NEEDS_REVIEW:
                 return Response({"detail": case.status_detail or "Re-pricing failed."}, status=400)
+            log(request.user, "DRG changed", f"MS-DRG {old or '—'} → {drg}", case)
             stay.ms_drg, stay.drg_source = drg, "reviewer"
         stay.drg_confirmed = True
         stay.save()
@@ -172,6 +194,8 @@ class CaseReport(APIView):
 
     def get(self, request, pk):
         case = get_case(request, pk)
+        _released_or_staff(request, case)
+        log(request.user, "Report viewed", "", case)
         return Response(reports.build(case))
 
 
@@ -218,6 +242,8 @@ class Approve(APIView):
         s = NoteSerializer(data=request.data); s.is_valid(raise_exception=True)
         if case.status == Case.Status.SENT:
             return Response({"detail": "This case was already sent."}, status=400)
+        if case.status != Case.Status.NEEDS_REVIEW:
+            return Response({"detail": f"A case in status '{case.status}' cannot be approved; it must be priced and reviewed first."}, status=400)
         open_flags = case.flags.filter(severity="check", resolved=False).count()
         if open_flags:
             return Response({"detail": f"{open_flags} flag(s) still need a decision."}, status=400)
@@ -252,6 +278,8 @@ class Return(APIView):
     def post(self, request, pk):
         case = get_case(request, pk)
         s = ReturnSerializer(data=request.data); s.is_valid(raise_exception=True)
+        if case.status == Case.Status.SENT:
+            return Response({"detail": "This case was already sent to the firm."}, status=400)
         case.status, case.status_detail = Case.Status.RETURNED, s.validated_data["note"]
         case.save()
         log(request.user, "Case returned", s.validated_data["note"], case)
@@ -285,7 +313,9 @@ class AuditList(APIView):
         qs = AuditEntry.objects.select_related("case")
         c = request.query_params.get("case")
         if c:
-            qs = qs.filter(case_id=c)
+            if not c.isdigit():
+                return Response({"detail": "case must be a number."}, status=400)
+            qs = qs.filter(case_id=int(c))
         pg = Page()
         page = pg.paginate_queryset(qs, request, view=self)
         return pg.get_paginated_response([{"at": e.at, "actor": e.actor, "action": e.action, "detail": e.detail,

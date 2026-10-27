@@ -62,7 +62,7 @@ class CaseDetailSerializer(CaseSummarySerializer):
     bill_type = serializers.SerializerMethodField()
 
     class Meta(CaseSummarySerializer.Meta):
-        fields = CaseSummarySerializer.Meta.fields + ("report_for", "bill_type", "files", "hospital_match", "totals", "flags", "stay")
+        fields = CaseSummarySerializer.Meta.fields + ("report_for", "bill_type", "files", "hospital_match", "totals", "eob", "flags", "stay")
 
     def get_bill_type(self, o): return o.bill_type or None
 
@@ -118,12 +118,15 @@ class LineSerializer(serializers.ModelSerializer):
     cash = serializers.FloatField(allow_null=True)
     medicare = serializers.FloatField(allow_null=True)
     cost = serializers.FloatField(allow_null=True)
+    eob_allowed = serializers.FloatField(allow_null=True)
+    eob_paid = serializers.FloatField(allow_null=True)
+    eob_patient = serializers.FloatField(allow_null=True)
 
     class Meta:
         model = CaseLine
         fields = ("line_no", "service_date", "revenue_code", "hcpcs", "modifiers", "units", "description", "charge",
                   "confidence", "payer_rate", "payer_rate_is_estimate", "median", "p10", "p90", "cash", "medicare",
-                  "medicare_status", "medicare_source", "cost", "status", "sources")
+                  "medicare_status", "medicare_source", "cost", "eob_allowed", "eob_paid", "eob_patient", "status", "sources")
 
 
 class NoteSerializer(serializers.Serializer):
@@ -147,3 +150,6 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ("outcome", "price_per_report", "pricing_model", "comment")
+
+    def validate_pricing_model(self, v):
+        return v or ""          # the field is not nullable; "not answered" is stored as empty

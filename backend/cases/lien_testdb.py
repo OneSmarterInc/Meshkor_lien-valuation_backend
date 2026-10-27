@@ -22,10 +22,13 @@ MRF = [
     ("99285", None, "Outpatient", "Anthem", "Anthem", "Anthem HMO", 1500.0, None, None),
     ("99285", None, "Outpatient", "UnitedHealthcare", "UHC", "UHC Choice", 1300.0, None, None),
     ("99285", None, "Outpatient", "Aetna", "Aetna", "Aetna Open", 1700.0, None, None),
+    ("99285", None, "Outpatient", "Medicare Advantage", "Humana", "Humana - Medicare", 620.0, None, None),   # government: not in the median
+    ("99285", None, "Outpatient", "Medicaid", "Molina", "Molina - Medicaid", 450.0, None, None),
     ("99285", None, "Inpatient", "Anthem", "Anthem", "Anthem PPO", 9999.0, None, None),     # wrong setting, never used
     ("70450", None, "Both", "Anthem", "Anthem", "Anthem PPO", None, 40.0, None),           # percentage only
     ("70450", None, "Both", "Aetna", "Aetna", "Aetna Open", 700.0, None, None),
     ("70450", None, "Both", "UnitedHealthcare", "UHC", "UHC Choice", 800.0, None, None),
+    ("70450", None, "Both", "Cigna", "Cigna", "Cigna OAP", 0.62, None, None),           # a factor in the dollar column
     ("85025", None, "Both", "Anthem", "Anthem", "Anthem PPO", 20.0, None, 15.0),
     # OSU style: "fee schedule" row whose dollar column holds a factor; the real term is in the notes
     ("71046", None, "Outpatient", "Anthem", "Anthem", "Anthem - Blue Access", 2.18, None, None, "226.10% of Medicare"),
@@ -33,6 +36,8 @@ MRF = [
     (None, "481", "Inpatient", "UnitedHealthcare", "UHC", "UHC Choice", 22000.0, None, None),
     (None, "481", "Inpatient", "Anthem", "Anthem", "Anthem PPO", 26000.0, None, None),
     (None, "481", "Inpatient", "Aetna", "Aetna", "Aetna Open", None, 55.0, None),
+    (None, "481", "Inpatient", "Medicare", "Medicare", "Medicare", 13162.13, None, None),       # government: not in the median
+    (None, "481", "Inpatient", "ACA Exchange", "CareSource", "CareSource - Exchange", 20401.30, None, None),
     (None, "470", "Inpatient", "UnitedHealthcare", "UHC", "UHC Choice", 18000.0, None, None),
 ]
 
@@ -41,8 +46,12 @@ OPPS = [("99285", "V", "5025", 600.0), ("70450", "S", "5522", 110.0), ("71046", 
         ("72125", "S", "5522", 110.0), ("36415", "Q4", None, None), ("85025", "Q4", None, None),
         ("80053", "Q4", None, None), ("96374", "S", "5693", 200.0), ("J2270", "N", None, None),
         ("J2405", "N", None, None), ("J7030", "N", None, None), ("25607", "J1", "5114", 6800.0),
-        ("29125", "S", "5101", 150.0), ("72131", "S", "5522", 110.0), ("73030", "S", "5521", 70.0)]
-CLFS = [("36415", 3.0), ("85025", 7.5), ("80053", 10.0)]
+        ("29125", "S", "5101", 150.0), ("72131", "S", "5522", 110.0), ("73030", "S", "5521", 70.0),
+        ("29881", "J1", "5114", 5000.0),                  # a second J1 procedure (knee arthroscopy)
+        ("12002", "T", "5052", 500.0), ("11042", "T", "5051", 300.0),   # "T" procedures: multiple procedure discount
+        ("C1749", "H", None, 400.0),                       # pass-through device: never packaged
+        ("87070", "A", None, None), ("97110", "A", None, None)]   # paid on the lab / physician fee schedules
+CLFS = [("36415", 3.0), ("85025", 7.5), ("80053", 10.0), ("87070", 11.0)]
 
 
 def build(root: Path) -> Path:
@@ -60,11 +69,11 @@ def build(root: Path) -> Path:
          source_layout VARCHAR, effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
     for code, drg, setting, grp, payer, plan, dollar, pct, cash, *notes in MRF:
         x("""INSERT INTO ref_hospital_mrf (ccn, hospital_name, type2_npis, last_updated_on, setting, payer_group, payer_name,
-             plan_name, negotiated_dollar, negotiated_percentage, discounted_cash, hcpcs, ms_drg, notes, source_layout,
+             plan_name, negotiated_dollar, negotiated_percentage, discounted_cash, hcpcs, ms_drg, notes, gross_charge, source_layout,
              effective_start, effective_end, source_file, source_sha256, period)
-             VALUES ('360085', 'Ohio State University Hospitals', '1447359997|1831389550', DATE '2026-07-01', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             VALUES ('360085', 'Ohio State University Hospitals', '1447359997|1831389550', DATE '2026-07-01', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                      'tall', DATE '2026-07-01', DATE '9999-12-31', ?, ?, '2026-10')""",
-          [setting, grp, payer, plan, dollar, pct, cash, code, drg, notes[0] if notes else None, MRF_FILE, SHA])
+          [setting, grp, payer, plan, dollar, pct, cash, code, drg, notes[0] if notes else None, 2064.0 if code == "70450" else None, MRF_FILE, SHA])
     x("""CREATE TABLE ref_opps (hcpcs VARCHAR, description VARCHAR, status_indicator VARCHAR, apc VARCHAR, relative_weight DOUBLE,
          payment_rate_national DOUBLE, national_unadjusted_copay DOUBLE, minimum_unadjusted_copay DOUBLE, source_file VARCHAR,
          source_sha256 VARCHAR, effective_start DATE, effective_end DATE, period VARCHAR)""")
@@ -95,6 +104,16 @@ def build(root: Path) -> Path:
     for drg, title, w in (("481", "HIP AND FEMUR PROCEDURES EXCEPT MAJOR JOINT WITH CC", 2.0),
                           ("480", "HIP AND FEMUR PROCEDURES EXCEPT MAJOR JOINT WITH MCC", 3.0)):
         x("INSERT INTO ref_ipps_drg VALUES (?, ?, ?, 'FY2026', DATE '2025-10-01', DATE '2026-09-30', 'ipps/table5.txt', ?, 'FY2026')", [drg, title, w, SHA])
+    x("""CREATE TABLE ref_msdrg_dx (icd10 VARCHAR, mdc VARCHAR, drg_from VARCHAR, drg_to VARCHAR, description VARCHAR,
+         effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
+    x("""CREATE TABLE ref_msdrg_cc (icd10 VARCHAR, cc_level VARCHAR, hac VARCHAR, pdx_exclusion_group VARCHAR, pdx_exclusion_count INTEGER,
+         description VARCHAR, cc_only_if_alive BOOLEAN, effective_start DATE, effective_end DATE, source_file VARCHAR, source_sha256 VARCHAR, period VARCHAR)""")
+    for code, desc in (("S72301A", "Unspecified fracture of shaft of right femur, initial encounter for closed fracture"),
+                       ("E1165", "Type 2 diabetes mellitus with hyperglycemia"), ("D62", "Acute posthemorrhagic anemia")):
+        x("INSERT INTO ref_msdrg_dx VALUES (?, '08', '480', '482', ?, DATE '2025-10-01', DATE '2026-09-30', 'MSDRG/V43.1/appendix_B.txt', ?, 'V43.1')", [code, desc, SHA])
+    for code, lev, desc in (("E1165", "CC", "Type 2 diabetes mellitus with hyperglycemia"), ("D62", "CC", "Acute posthemorrhagic anemia"),
+                            ("J9601", "MCC", "Acute respiratory failure with hypoxia")):
+        x("INSERT INTO ref_msdrg_cc VALUES (?, ?, NULL, '0001', 1, ?, false, DATE '2025-10-01', DATE '2026-09-30', 'MSDRG/V43.1/appendix_C.txt', ?, 'V43.1')", [code, lev, desc, SHA])
     x("""CREATE TABLE ref_hcris (ccn VARCHAR, fy_end DATE, cost_to_charge_ratio DOUBLE, is_primary BOOLEAN,
          source_file VARCHAR, source_sha256 VARCHAR)""")
     x("INSERT INTO ref_hcris VALUES ('360085', DATE '2024-06-30', ?, true, 'hcris/HOSP10FY2024.zip', ?)", [CCR, SHA])

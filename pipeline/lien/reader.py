@@ -1,11 +1,15 @@
-"""Read a hospital bill (PDF with a text layer) into header fields and lines.
+"""Read a hospital bill into header fields and lines.
 
-Works on itemized statements and UB-04 style line lists that a hospital
-billing system prints to PDF. Each line must show, in this order:
+Accepted files:
+  PDF   with a text layer (printed by the billing system) -> read directly, exact
+  PDF   without text (a scan)                             -> each page read by local OCR (ocr.py)
+  JPG / PNG / TIFF (a photo or scan)                      -> local OCR
+  DOCX  (Word)                                            -> paragraphs and tables; pictures inside it by OCR
+Each line must show, in this order:
     [line no]  date  revenue code  [HCPCS/CPT]  units  description  charge
-A scanned bill (an image, or a PDF with no text layer) raises BillNotReadable;
-reading scans needs OCR, which is a separate decision (PHI leaves the server
-with most OCR services).
+OCR is never exact: every line read by OCR carries the OCR certainty, a missing value is filled with a
+safe default and lowers the certainty, and intake adds a check flag so a person compares the lines
+with the bill.
 
 Nothing here touches Django or the database, so it can be tested alone.
 """
@@ -51,6 +55,8 @@ class Bill:
     diagnoses: list[str] = field(default_factory=list)
     pages: int = 0
     notes: list[str] = field(default_factory=list)
+    method: str = "text"          # text | ocr | docx | docx+ocr
+    ocr_score: float | None = None   # lowest OCR certainty of a bill line (OCR only)
 
     @property
     def lines_total(self) -> Decimal:
@@ -78,9 +84,35 @@ def pdf_text(data: bytes) -> tuple[list[str], int]:
             page = page.filter(lambda o: o.get("object_type") != "char" or (o.get("size") or 0) < 20)
             text = page.extract_text() or ""
             lines += [ln.strip() for ln in text.splitlines() if ln.strip()]
-    if sum(len(x) for x in lines) < 40:
-        raise BillNotReadable("The PDF has no text layer (it is a scan or a photo). Reading scans is not set up yet.")
     return lines, n
+
+
+def docx_text(data: bytes) -> tuple[list[str], list[bytes]]:
+    """Text lines of a Word file (paragraphs, then table rows with cells joined), and its pictures."""
+    import zipfile
+    try:
+        import docx
+    except ImportError as e:
+        raise BillNotReadable("Word files cannot be read on this server yet: run  python -m pip install -r requirements.txt") from e
+    try:
+        d = docx.Document(io.BytesIO(data))
+    except Exception as e:  # noqa: BLE001
+        raise BillNotReadable(f"The Word file could not be opened ({type(e).__name__}).") from e
+    lines = [p.text.strip() for p in d.paragraphs if p.text.strip()]
+    for t in d.tables:
+        for row in t.rows:
+            cells, prev = [], None
+            for c in row.cells:            # merged cells repeat: keep each once
+                if c._tc is not prev:
+                    txt = " ".join(c.text.split())
+                    if txt:
+                        cells.append(txt)
+                prev = c._tc
+            if cells:
+                lines.append(" ".join(cells))
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        pics = [z.read(n) for n in z.namelist() if n.startswith("word/media/") and n.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))]
+    return lines, pics
 
 
 # ----------------------------------------------------------------------------- parsing
@@ -89,9 +121,16 @@ DATE = r"(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})"
 MONEY = r"\(?-?\$?\s?-?[\d,]+\.\d{2}\)?"
 LINE_RX = re.compile(
     rf"^(?:(?P<no>\d{{1,4}})\s+)?(?P<date>{DATE})\s+(?P<rev>\d{{3,4}})\s+"
-    rf"(?:(?P<code>[A-Z]?\d{{4}}[A-Z0-9]?|\d{{5}})(?:[\s-]+(?P<mods>(?:[A-Z0-9]{{2}}\s?){{1,4}}))?\s+)?"
-    rf"(?P<units>\d{{1,5}}(?:\.\d{{1,2}})?)\s+(?P<desc>.+?)\s+(?P<charge>{MONEY})$")
-TOTAL_RX = re.compile(rf"^(?:TOTAL CHARGES|TOTAL BILLED|TOTAL|GRAND TOTAL|TOTALS)\b[:\s]*(?P<amt>{MONEY})$", re.I)
+    rf"(?:(?P<code>[A-Z]\d{{4}}|\d{{4}}[A-Z0-9])(?:[\s-]+(?P<mods>(?:[A-Z0-9]{{2}}\s?){{1,4}}))?\s+)?"
+    rf"(?P<units>\d{{1,4}}(?:\.\d{{1,2}})?)\s+(?P<desc>.+?)\s+(?P<charge>{MONEY})$")
+# A looser pattern, tried only when LINE_RX does not match: OCR often drops a thin "1" in the units column,
+# or a revenue code or the description. The missing part is filled with a safe default and the line gets a
+# lower certainty, so the reviewer is asked to check it.
+LOOSE_RX = re.compile(
+    rf"^(?:(?P<no>\d{{1,4}})\s+)?(?P<date>{DATE})\s+(?:(?P<rev>\d{{3,4}})\s+)?"
+    rf"(?:(?P<code>[A-Z]\d{{4}}|\d{{4}}[A-Z0-9])(?:[\s-]+(?P<mods>(?:[A-Z0-9]{{2}}\s?){{1,4}}))?\s+)?"
+    rf"(?:(?P<units>\d{{1,4}}(?:\.\d{{1,2}})?)\s+)?(?P<desc>.*?)\s*(?P<charge>{MONEY})$")
+TOTAL_RX = re.compile(rf"^[\W_]*(?:TOTAL CHARGES|TOTAL BILLED|TOTAL|GRAND TOTAL|TOTALS)\b[:\s]*(?P<amt>{MONEY})$", re.I)
 HEADER_RX = re.compile(r"^#?\s*(?:line\s+)?date\b.*\b(rev|revenue)\b", re.I)
 
 LABELS = {
@@ -158,10 +197,31 @@ def parse_header(lines: list[str], bill: Bill) -> None:
             m = re.search(rf"{LABELS['dates']}[:#]?\s+{DATE}(?:\s*(?:to|-|through|thru)\s*{DATE})?", ln, re.I)
             if m:
                 bill.date_from, bill.date_to = _date(m.group(1)), _date(m.group(2) or m.group(1))
-        for code in re.findall(r"\b(?:Dx|Diagnosis|ICD-10)[^:]*:\s*([A-Z]\d{2}\.?[0-9A-Z]{0,4})", ln, re.I):
-            bill.diagnoses.append(code.replace(".", "").upper())
     if bill.facility_name.startswith("("):
         bill.facility_name = ""
+
+
+DX_LABEL = re.compile(r"\b(?P<kind>principal|primary|other|secondary|additional)?\s*(?:diagnos[ie]s|dx|icd-?10(?:-cm)?(?: codes?)?)\b(?P<rest>.*)$", re.I)
+ICD10 = re.compile(r"\b([A-TV-Z]\d[0-9A-Z])(?:\.?([0-9A-Z]{1,4}))?\b")
+
+
+def parse_diagnoses(lines: list[str], bill: Bill) -> None:
+    """ICD-10-CM codes from lines labelled Diagnosis / Dx / ICD-10 (anywhere on the bill: a UB-04 lists
+    them below the lines, box 67). The principal diagnosis comes first; "admitting" diagnoses are skipped."""
+    principal, others = [], []
+    for ln in lines:
+        if re.search(r"\badmitting\b", ln, re.I) or LINE_RX.match(ln):
+            continue
+        m = DX_LABEL.search(ln)
+        if not m:
+            continue
+        codes = [(a + (b or "")).upper() for a, b in ICD10.findall(m.group("rest"))]
+        (principal if (m.group("kind") or "").lower() in ("principal", "primary") else others).extend(codes)
+    seen = []
+    for c in principal + others:
+        if c not in seen:
+            seen.append(c)
+    bill.diagnoses = seen
 
 
 def parse_lines(lines: list[str], bill: Bill) -> None:
@@ -172,14 +232,27 @@ def parse_lines(lines: list[str], bill: Bill) -> None:
             in_table = True
             continue
         m = LINE_RX.match(ln)
+        loose = False
+        if not m:
+            m = LOOSE_RX.match(ln)
+            loose = m is not None
         if m:
             in_table = True
             n += 1
             code = (m.group("code") or "").upper()
-            rev = m.group("rev").zfill(4)
+            rev = (m.group("rev") or "").zfill(4) if m.group("rev") else ""
             conf = 0.98
+            missing = []
+            if loose:
+                if not m.group("units"):
+                    missing.append("units (1 assumed)")
+                if not m.group("rev"):
+                    missing.append("revenue code")
+                if not m.group("desc").strip():
+                    missing.append("description")
+                conf = 0.85 if missing else 0.9
             try:
-                units = Decimal(m.group("units"))
+                units = Decimal(m.group("units")) if m.group("units") else Decimal("1")
                 charge = _money(m.group("charge"))
             except InvalidOperation:
                 units, charge, conf = Decimal("1"), Decimal("0"), 0.4
@@ -191,6 +264,8 @@ def parse_lines(lines: list[str], bill: Bill) -> None:
                 line_no=n, service_date=_date(m.group("date")), revenue_code=rev, hcpcs=code,
                 modifiers=" ".join((m.group("mods") or "").split()), units=units,
                 description=m.group("desc").strip()[:300], charge=charge, confidence=conf))
+            if missing:
+                bill.notes.append(f"Line {n}: not read: {', '.join(missing)}")
             continue
         t = TOTAL_RX.match(ln)
         if t and in_table:
@@ -203,13 +278,21 @@ def parse_lines(lines: list[str], bill: Bill) -> None:
             last.description = f"{last.description} {ln}"[:300]
 
 
-def read_pdf(data: bytes) -> Bill:
-    lines, pages = pdf_text(data)
-    bill = Bill(pages=pages)
+def _finish(bill: Bill, lines: list[str], scores: list[float] | None = None) -> Bill:
     parse_header(lines, bill)
     parse_lines(lines, bill)
+    parse_diagnoses(lines, bill)
     if not bill.lines:
-        raise BillNotReadable("No bill lines were found. The layout is not one the reader knows yet.")
+        raise BillNotReadable("No bill lines were found. The layout is not one the reader knows yet."
+                              + (" The picture may be too blurred or too small; upload a sharper photo or the PDF from the hospital."
+                                 if scores is not None else ""))
+    if scores is not None:
+        # OCR: a bill line's certainty is at most the OCR certainty of its text line, and never above 0.95.
+        # parse_lines adds one bill line per matching text line, in order, so the two lists pair up.
+        matched = [sc for t, sc in zip(lines, scores) if LINE_RX.match(t) or LOOSE_RX.match(t)]
+        for ln, sc in zip(bill.lines, matched):
+            ln.confidence = round(min(ln.confidence, sc, 0.95), 2)
+        bill.ocr_score = min(ln.confidence for ln in bill.lines)
     dates = [ln.service_date for ln in bill.lines if ln.service_date]
     if dates:
         bill.date_from = bill.date_from or min(dates)
@@ -217,7 +300,87 @@ def read_pdf(data: bytes) -> Bill:
     return bill
 
 
+def _ocr(ocr_lines, bill: Bill) -> Bill:
+    bill.method = "ocr" if bill.method == "text" else bill.method
+    return _finish(bill, [o.text for o in ocr_lines], [o.score for o in ocr_lines])
+
+
+def read_pdf(data: bytes) -> Bill:
+    lines, pages = pdf_text(data)
+    bill = Bill(pages=pages)
+    if sum(len(x) for x in lines) >= 40:
+        try:
+            return _finish(bill, lines)
+        except BillNotReadable:
+            if sum(len(x) for x in lines) > 400:
+                raise              # a real text layer with an unknown layout: OCR would not help
+    from . import ocr               # no (usable) text layer: a scanned PDF
+    try:
+        ol, bill.pages = ocr.pdf_lines(data)
+    except ocr.OcrNotInstalled:
+        raise
+    except Exception as e:  # noqa: BLE001 — pdfium raises its own error types
+        raise BillNotReadable(f"The PDF has no text and its pages could not be rendered for OCR ({type(e).__name__}).") from e
+    return _ocr(ol, bill)
+
+
+def read_image(data: bytes) -> Bill:
+    from . import ocr
+    try:
+        ol = ocr.image_bytes_lines(data)
+    except ocr.OcrNotInstalled:
+        raise
+    except Exception as e:  # noqa: BLE001 — PIL raises many kinds
+        raise BillNotReadable(f"The picture could not be opened ({type(e).__name__}).") from e
+    return _ocr(ol, Bill(pages=1))
+
+
+def read_docx(data: bytes) -> Bill:
+    lines, pics = docx_text(data)
+    bill = Bill(pages=1, method="docx")
+    try:
+        return _finish(bill, lines)
+    except BillNotReadable:
+        if not pics:
+            raise
+    from . import ocr               # a Word file that holds a scanned bill as a picture
+    ol = []
+    for p in pics:
+        ol += ocr.image_bytes_lines(p)
+    bill = Bill(pages=len(pics), method="docx+ocr")
+    return _finish(bill, lines + [o.text for o in ol], [1.0] * len(lines) + [o.score for o in ol])
+
+
+KINDS = {"pdf": "PDF", "png": "image", "jpg": "image", "tiff": "image", "docx": "Word"}
+
+
+def kind_of(data: bytes, name: str = "") -> str | None:
+    """The real type of a file, from its first bytes (the name can be wrong)."""
+    if data[:5] == b"%PDF-":
+        return "pdf"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if data[:4] in (b"II*\x00", b"MM\x00*"):
+        return "tiff"
+    if data[:4] == b"PK\x03\x04":
+        import zipfile
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                if "word/document.xml" in z.namelist():
+                    return "docx"
+        except zipfile.BadZipFile:
+            return None
+    return None
+
+
 def read(data: bytes, name: str) -> Bill:
-    if name.lower().endswith(".pdf") or data[:5] == b"%PDF-":
+    k = kind_of(data, name)
+    if k == "pdf":
         return read_pdf(data)
-    raise BillNotReadable("The bill is an image. Reading scans and photos is not set up yet; upload the PDF from the hospital.")
+    if k in ("png", "jpg", "tiff"):
+        return read_image(data)
+    if k == "docx":
+        return read_docx(data)
+    raise BillNotReadable("The file is not a PDF, JPG, PNG, TIFF or Word (.docx) file.")

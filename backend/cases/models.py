@@ -56,6 +56,7 @@ class Case(models.Model):
     billed_total = models.DecimalField(**MONEY)
     price_file = models.JSONField(null=True, blank=True)   # file_name, period, last_updated_on, covers_service_date
     totals = models.JSONField(default=dict, blank=True)     # billed, payer_rate, median, cash, medicare, cost
+    eob = models.JSONField(null=True, blank=True)           # what the EOB says (pipeline/lien/eob.py compare()); null = no EOB read
 
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.UPLOADED, db_index=True)
     status_detail = models.TextField(blank=True)
@@ -135,6 +136,9 @@ class CaseLine(models.Model):
     medicare_status = models.CharField(max_length=10, default="none")     # priced, packaged, none
     medicare_source = models.CharField(max_length=120, blank=True)
     cost = models.DecimalField(**MONEY)
+    eob_allowed = models.DecimalField(**MONEY)      # from the insurer's EOB, when the line was matched to it
+    eob_paid = models.DecimalField(**MONEY)
+    eob_patient = models.DecimalField(**MONEY)      # deductible + copay + coinsurance
     status = models.CharField(max_length=30, default="unpriced_no_code")  # priced, packaged, unpriced_no_code, unpriced_no_hospital_row
     sources = models.JSONField(default=list, blank=True)
 
@@ -144,7 +148,7 @@ class CaseLine(models.Model):
 
 
 class Flag(models.Model):
-    KINDS = ("low_confidence", "no_rate", "no_price_file", "estimate", "packaged", "no_eob", "drg_check", "other")
+    KINDS = ("low_confidence", "no_rate", "no_price_file", "estimate", "packaged", "no_eob", "eob", "drg_check", "other")
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="flags")
     kind = models.CharField(max_length=20)

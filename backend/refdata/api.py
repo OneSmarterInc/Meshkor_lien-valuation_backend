@@ -36,6 +36,21 @@ def _covers(periods: list[str]) -> str:
     return "" if not p else (p[0] if len(p) == 1 else f"{p[0]}–{p[-1]}")
 
 
+def _manifests() -> dict:
+    """Latest manifest per table from data/ref/_manifest (what is really on disk)."""
+    import json
+    out = {}
+    folder = config.data_paths().manifests
+    for p in folder.glob("*.json"):
+        try:
+            m = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if m.get("table"):
+            out[m["table"]] = m
+    return out
+
+
 def reference_rows() -> list[dict]:
     tables = list(config.sources().keys())
     for extra in ("ref_msdrg", "ref_340b_entity"):
@@ -44,12 +59,22 @@ def reference_rows() -> list[dict]:
     latest = {}
     for run in LoadRun.objects.filter(status=LoadRun.Status.SUCCESS).order_by("table", "-started_at"):
         latest.setdefault(run.table, run)
+    manifests = _manifests()
     rows = []
     for t in tables:
         if t == "ref_hospital_mrf":
             continue
-        run = latest.get(t)
-        if run is None:
+        run, man = latest.get(t), manifests.get(t)
+        if man is not None:
+            # The manifest is written by the loader with the Parquet file: it is the truth about what is loaded,
+            # also on a PC that copied data/ without the PostgreSQL load history.
+            n = man.get("rows") or 0
+            periods = [src.get("period") for src in man.get("sources") or []]
+            st = "ok" if n > 0 else "partial"
+            if any("skipped" in str(w).lower() for w in man.get("warnings") or []):
+                st = "partial"
+            rows.append({"name": LABELS.get(t, t), "rows": n, "covers": _covers(periods), "status": st})
+        elif run is None:
             rows.append({"name": LABELS.get(t, t), "rows": 0, "covers": "", "status": "missing"})
         else:
             st = "ok" if (run.rows or 0) > 0 else "partial"
@@ -57,6 +82,22 @@ def reference_rows() -> list[dict]:
                 st = "partial" if st == "ok" and any("skipped" in str(w).lower() for w in run.warnings) else st
             rows.append({"name": LABELS.get(t, t), "rows": run.rows or 0, "covers": _covers(run.periods), "status": st})
     return rows
+
+
+def verify_summary() -> dict | None:
+    v = VerifyRun.objects.order_by("-created_at").first()
+    if v:
+        return {"pass": v.passed, "fail": v.failed, "run_at": v.created_at}
+    # No run recorded in this database: read the report file the verify step wrote.
+    import re
+    p = config.data_paths().root / "reports" / "verify_latest.md"
+    if p.exists():
+        head = p.read_text(encoding="utf-8", errors="replace")[:600]
+        m = re.search(r"\*\*(\d[\d,]*) pass · (\d[\d,]*) fail", head)
+        c = re.search(r"Created (\S+)", head)
+        if m:
+            return {"pass": int(m.group(1).replace(",", "")), "fail": int(m.group(2).replace(",", "")), "run_at": c.group(1) if c else None}
+    return None
 
 
 def price_file_rows() -> list[dict]:
@@ -83,9 +124,8 @@ class DataSourcesView(APIView):
     def get(self, request):
         data = cache.get("data_sources")
         if data is None:
-            v = VerifyRun.objects.order_by("-created_at").first()
             data = {
-                "verify": {"pass": v.passed, "fail": v.failed, "run_at": v.created_at} if v else None,
+                "verify": verify_summary(),
                 "reference": reference_rows(),
                 "price_files": price_file_rows(),
             }

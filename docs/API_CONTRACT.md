@@ -12,7 +12,7 @@ Version 1 · 2026-10-23. The React frontend calls exactly these endpoints. Build
 | Token expiry | On `401`, the frontend calls refresh once, then repeats the request. If refresh fails, it logs out. |
 | Errors | Status code + JSON `{"detail": "message"}` or DRF field errors `{"field": ["message"]}`. The frontend shows `detail`, or the first field message. |
 | Lists | Paginated like DRF: `{"count": 42, "next": url|null, "previous": url|null, "results": [...]}`. Query `?page=2`. |
-| Access | **A firm user sees only its own firm's cases.** The backend enforces this; the frontend only hides menus. Staff (reviewer, admin) see all firms. |
+| Access | **A firm user sees only its own firm's cases.** The backend enforces this; the frontend only hides menus. Staff (reviewer, admin) see all firms. **Before a case is `sent`, a firm user gets progress only:** the detail has empty `flags`, null `totals` and `stay`, a neutral `status_detail`; `/lines/`, `/report/` and the downloads answer `403`. |
 | CORS | Allow the frontend origin, header `Authorization`, and expose `Content-Disposition` (for download file names). |
 
 ## Roles
@@ -95,7 +95,7 @@ Query: `status` (one value or comma list), `search` (case number, matter ref, ho
 
 ### `POST /api/cases/` (multipart/form-data)
 Fields: `matter_ref` (text), `report_for` (`plaintiff` | `defense` | `lien_resolution`), `consent` (`true`, required), `bill` (file, required, PDF/JPG/PNG/TIFF ≤ 50 MB), `eob` (file, optional).
-Staff may also send `firm_id`. → `201` case summary (status `uploaded`).
+Staff may also send `firm_id`. → `201` case summary (status `uploaded`). The answer comes at once; the pricing runs in the background (`uploaded` → `processing` → `needs_review`, `no_price_file` or `error`). Poll `GET /api/cases/{id}/` (the website does every 3 s) until the status leaves `uploaded`/`processing`.
 
 ### `GET /api/cases/{id}/` (case detail)
 Case summary plus:
@@ -119,7 +119,13 @@ Case summary plus:
     }
   },
   "totals": {"billed": 9647.87, "payer_rate": 3114.60, "median": 2964.90,
-             "cash": null, "medicare": 1400.43, "cost": 2026.05},
+             "cash": null, "medicare": 1400.43, "cost": 2026.05,
+             "payer_rate_is_estimate": false,
+             "basis": "service_date",        /* or "estimate": no price file covers the service date, values come from the nearest file */
+             "coverage": {"payer_rate": 61, "payer_rate_billed": 5921.0, "median": 61, "median_billed": 5921.0, "cash": 0, "cash_billed": 0,
+                          "medicare": 100, "medicare_billed": 9647.87, "cost": 100, "cost_billed": 9647.87,
+                          "lines": 11, "lines_with": {"payer_rate": 4, "median": 4, "cash": 0, "medicare": 11, "cost": 11}}},
+  /* coverage: the billed dollars (and % of the bill) on the lines that have each value; absent for an inpatient stay */
   "flags": [
     {"id": 55, "kind": "low_confidence", "severity": "check", "line_no": 5,
      "title": "Line 5 · 36415 read with 71 % certainty",
@@ -128,9 +134,18 @@ Case summary plus:
      "title": "4 lines have no separate Medicare payment",
      "detail": "Lines 5, 9, 10, 11 are packaged into other payments.", "resolved": false}
   ],
-  "stay": null
+  "stay": null,
+  "eob": null   /* when an EOB was read: {"payer": "Anthem Blue Cross and Blue Shield", "plan": "…", "payer_group": "Anthem",
+                   "claim_number": "…", "provider": "…", "date_from": "2026-08-14", "date_to": "2026-08-14", "ms_drg": null,
+                   "level": "line" | "stay", "columns": ["billed", "allowed", …], "method": "text" | "ocr" | "docx",
+                   "totals": {"billed": 9647.87, "discount": null, "allowed": 3501.80, "not_covered": null, "deductible": 500.0,
+                              "copay": 0.0, "coinsurance": 600.36, "paid": 2401.44, "patient": 1100.36},
+                   "lines": 11, "lines_matched": 11, "bill_lines": 11,
+                   "vs_price_file": {"allowed": 2382.0, "posted": 2472.36, "pct": -4},   (same lines; may be missing)
+                   "file_name": "…", "sha256": "…"} */
 }
 ```
+`eob` is `null` when no EOB was uploaded or it could not be read (then a flag of kind `eob` says why). Flag kinds include `eob`.
 `hospital_match` is `null` when no match was found. `totals.cash` is `null` when the hospital posts no cash price.
 
 Flag `kind` values: `low_confidence`, `no_rate`, `no_price_file`, `estimate`, `packaged`, `no_eob`, `drg_check`, `other`. `severity`: `check` (reviewer must act) or `info`.
@@ -149,7 +164,7 @@ For an inpatient case, `stay` is:
              "medicare": 21740.00, "cost": 12308.52}
 }
 ```
-`drg_source`: `bill` or `grouper`. `level`: `principal`, `mcc`, `cc`, `other`.
+`drg_source`: `bill`, `grouper`, or `reviewer` (a reviewer typed a different DRG in confirm). `level`: `principal`, `mcc`, `cc` or `other` (from the CMS MS-DRG CC/MCC list on the date of service); `description` is the CMS name of the code.
 
 ### `GET /api/cases/{id}/lines/?basis=service_date|estimate`
 `service_date` (default) = rates in force on the date of service. `estimate` = hospital's current payer ÷ Medicare ratio × Medicare on the date of service.
@@ -163,6 +178,7 @@ For an inpatient case, `stay` is:
   "median": 1388.00, "p10": 1120.00, "p90": 1690.00, "cash": null,
   "medicare": 598.40, "medicare_status": "priced", "medicare_source": "OPPS 2026Q3, wage-adjusted",
   "cost": 714.63,
+  "eob_allowed": 1450.00, "eob_paid": 760.00, "eob_patient": 690.00,   /* null when the line is not on the EOB */
   "status": "priced",
   "sources": [{"label": "Hospital price file", "file_name": "31-1340739_…csv", "sha256": "…"}]
 }]
@@ -184,13 +200,21 @@ The report as data, for the on-screen preview (the PDF is built from the same da
   "title": "Reasonable value of hospital charges",
   "generated_at": "2026-10-23T09:41:00+05:30",
   "summary": [
-    {"benchmark": "Billed charges",                    "total": 9647.87, "pct_of_billed": 100},
-    {"benchmark": "Hospital's own rate with Anthem",   "total": 3114.60, "pct_of_billed": 32},
-    {"benchmark": "Hospital's median negotiated rate", "total": 2964.90, "pct_of_billed": 31},
-    {"benchmark": "Hospital's cost (cost report)",     "total": 2026.05, "pct_of_billed": 21},
-    {"benchmark": "Medicare rate for this hospital",   "total": 1400.43, "pct_of_billed": 15}
+    {"key": "billed",     "benchmark": "Billed charges",                    "total": 9647.87, "pct_of_billed": 100, "coverage_pct": 100, "note": ""},
+    {"key": "eob_allowed", "benchmark": "Allowed by Anthem … for this claim (EOB)", "total": 3501.80, "pct_of_billed": 36, "coverage_pct": 100, "note": "…"},   /* only with an EOB */
+    {"key": "eob_paid",   "benchmark": "Paid by Anthem … (EOB)",            "total": 2401.44, "pct_of_billed": 25,  "coverage_pct": 100, "note": "plus the patient's share …"},
+    {"key": "payer_rate", "benchmark": "Hospital's own rate with Anthem",   "total": 2472.36, "pct_of_billed": 42,  "coverage_pct": 61,
+                          "note": "4 of 11 lines, 61 % of billed charges; the % compares those lines only"},
+    {"key": "median",     "benchmark": "Median of the hospital's commercial insurer rates", "total": 2396.76, "pct_of_billed": 40,  "coverage_pct": 61, "note": "…"},
+    {"key": "cash",       "benchmark": "Hospital's cash price",             "total": 15.00,   "pct_of_billed": null, "coverage_pct": 1,
+                          "note": "posted on only 1 of 11 lines (1 % of billed charges): not comparable with the bill"},
+    {"key": "cost",       "benchmark": "Hospital's cost (cost report)",     "total": 2026.05, "pct_of_billed": 21,  "coverage_pct": 100, "note": ""},
+    {"key": "medicare",   "benchmark": "Medicare rate for this hospital",   "total": 1077.80, "pct_of_billed": 11,  "coverage_pct": 100, "note": ""}
   ],
   "summary_text": "The hospital billed $9,647.87. …",
+  "stay": null,   /* inpatient: {"ms_drg": "481", "drg_title": "…", "drg_source": "bill", "drg_confirmed": false, "los_days": 3,
+                     "medicare_source": "IPPS FY2026 …", "payer_rate_is_estimate": false, "p10": 22400.0, "p90": 25600.0} */
+  "eob": null,   /* or the case's eob object without file_name, sha256, columns and method */
   "lines": [ /* same objects as GET /lines/ */ ],
   "sources": [{"data": "Hospital price file", "file_name": "…", "dated": "2026-07-01", "sha256": "…"}],
   "method": "Each billed line is matched …",
@@ -198,6 +222,7 @@ The report as data, for the on-screen preview (the PDF is built from the same da
   "reviewer": {"name": "…", "approved_at": null}
 }
 ```
+`pct_of_billed` always compares the total with the billed charges of the **same lines**: when a benchmark has a value on only some lines (`coverage_pct` < 100), the % uses those lines' charges, and `note` says so. A benchmark on fewer than half of the billed charges has `pct_of_billed: null`. The cash row is present only when the hospital posts a cash price. For a self-pay bill the payer row is titled "No insurer on the bill".
 
 ### Downloads (file responses, auth required)
 | Endpoint | Content-Type | File name (Content-Disposition) |
