@@ -1,4 +1,4 @@
-# Paths for your folder D:\Datasetof CMS (unzipped downloads, one folder per source).
+﻿# Paths for your folder D:\Datasetof CMS (unzipped downloads, one folder per source).
 # Use it with these two lines in .env:
 #   MESHKOR_RAW_DIR=D:/Datasetof CMS
 #   MESHKOR_SOURCES=sources_local.yaml
@@ -40,7 +40,7 @@ ref_mpfs:
       gpci: GPCI*.csv
       locco: '*LOCCO.csv'
       oppscap: OPPSCAP*.csv
-  - period: 2024B                 # optional: needed for the Spec §8.5 date 2024-06-15
+  - period: 2024B                 # optional: needed for the Spec Â§8.5 date 2024-06-15
     effective_start: 2024-04-01
     effective_end: 2024-06-30
     page: https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu24b
@@ -694,7 +694,7 @@ ref_anesthesia_cf:
     members:
       anes: 'ANES*.csv'
 
-ref_ipps_drg:                     # Table 4a — MS-DRG weights (final rule Table 5)
+ref_ipps_drg:                     # Table 4a â€” MS-DRG weights (final rule Table 5)
   loader: ipps_drg
   releases:
     - period: FY2027
@@ -719,7 +719,7 @@ ref_ipps_drg:                     # Table 4a — MS-DRG weights (final rule Tabl
       members:
         table5: "*Correction Notice Table 5.txt"   # CN replaces the FR
 
-ref_ipps_hospital:                # Table 4b — per-hospital factors (Impact File) + national rates
+ref_ipps_hospital:                # Table 4b â€” per-hospital factors (Impact File) + national rates
   loader: ipps_hospital
   releases:
     - period: FY2027
@@ -784,7 +784,7 @@ ref_ipps_hospital:                # Table 4b — per-hospital factors (Impact Fi
           no_quality_no_ehr: {labor: 3971.42, nonlabor: 2434.09}
         capital_federal_rate: 512.14  # Table 1D
 
-ref_ccn_npi:                      # Table 8 — needs ref_provider first (NPPES fallback)
+ref_ccn_npi:                      # Table 8 â€” needs ref_provider first (NPPES fallback)
   loader: ccn_npi
   releases:
   - period: 2026-07
@@ -794,7 +794,7 @@ ref_ccn_npi:                      # Table 8 — needs ref_provider first (NPPES 
     members:
       enrollments: Hospital_Enrollments_*.csv
       additional_npis: Hospital_Additional_NPIs_*.csv
-ref_code_specialty:               # Table 9 — needs ref_provider first (taxonomy)
+ref_code_specialty:               # Table 9 â€” needs ref_provider first (taxonomy)
   loader: code_specialty
   releases:
   - period: CY2024
@@ -805,10 +805,10 @@ ref_code_specialty:               # Table 9 — needs ref_provider first (taxono
     file: UTILIZATION
     members:
       utilization: '*Prov_Svc*.csv'
-    min_share: 0.01               # Spec §6: X = 1 %
-    top_n: 10                     # Spec §6: N = 10
+    min_share: 0.01               # Spec Â§6: X = 1 %
+    top_n: 10                     # Spec Â§6: N = 10
 
-ref_clfs:                         # Table 11 — Clinical Laboratory Fee Schedule
+ref_clfs:                         # Table 11 â€” Clinical Laboratory Fee Schedule
   loader: clfs
   releases:
   - period: 2026Q4
@@ -896,7 +896,7 @@ ref_clfs:                         # Table 11 — Clinical Laboratory Fee Schedul
     file: CLFS/2026Q3
     members:
       clfs: '*.csv'
-ref_dmepos:                       # Table 12 — DMEPOS fee schedule (state x rural / non-rural)
+ref_dmepos:                       # Table 12 â€” DMEPOS fee schedule (state x rural / non-rural)
   loader: dmepos
   releases:
   - period: 2026D
@@ -984,7 +984,7 @@ ref_dmepos:                       # Table 12 — DMEPOS fee schedule (state x ru
     file: DMEPOS/2026C
     members:
       fees: 'DMEPOS*.csv'
-ref_dmepos_rural_zip:             # Table 12 helper — rural zip codes for DMEPOS
+ref_dmepos_rural_zip:             # Table 12 helper â€” rural zip codes for DMEPOS
   loader: dmepos_rural_zip
   releases:
   - period: 2026D
@@ -1072,7 +1072,7 @@ ref_dmepos_rural_zip:             # Table 12 helper — rural zip codes for DMEP
     file: DMEPOS/2026C
     members:
       rural_zip: 'DME Rural Zip Code*.csv'
-ref_ambulance:                    # Table 13 — Ambulance Fee Schedule
+ref_ambulance:                    # Table 13 â€” Ambulance Fee Schedule
   loader: ambulance
   releases:
   - period: CY2026
@@ -1096,7 +1096,7 @@ ref_ambulance:                    # Table 13 — Ambulance Fee Schedule
     file: AMBULANCE/2024
     members:
       afs: '*AFS2024__PUF.csv'
-ref_zip_locality:                 # Table 13 helper — zip -> carrier, locality, rural indicator
+ref_zip_locality:                 # Table 13 helper â€” zip -> carrier, locality, rural indicator
   loader: zip_locality
   releases:
   - period: 2026-08                # CMS posts only the latest file (updated 08/13/2026); used for Jan-Sep 2026
@@ -1127,7 +1127,7 @@ ref_zip_locality:                 # Table 13 helper — zip -> carrier, locality
     file: AMBULANCE/2024
     members:
       zip5: 'ZIP5_DEC2024_FINAL.txt'
-ref_anesthesia_base_units:        # Table 14 part 2 — base units (CY 2022 file, unchanged 2024-2026)
+ref_anesthesia_base_units:        # Table 14 part 2 â€” base units (CY 2022 file, unchanged 2024-2026)
   loader: anesthesia_base_units
   releases:
   - period: CY2022
@@ -1139,8 +1139,8 @@ ref_anesthesia_base_units:        # Table 14 part 2 — base units (CY 2022 file
       base_units: '*Base_Units*.txt'
 
 # ---------------------------------------------------------------------------
-# Spec §11 — additional free sources (own definition of done)
-ref_geo:                          # Table 17 — HUD-USPS ZIP -> county / CBSA, quarterly
+# Spec Â§11 â€” additional free sources (own definition of done)
+ref_geo:                          # Table 17 â€” HUD-USPS ZIP -> county / CBSA, quarterly
   loader: geo_hud
   releases:
   - period: 2024Q1
@@ -1223,7 +1223,7 @@ ref_geo:                          # Table 17 — HUD-USPS ZIP -> county / CBSA, 
     members:
       county: 'ZIP?COUNTY_062026.xlsx'
       cbsa: 'ZIP?CBSA_062026.xlsx'
-ref_geo_zcta_county:              # Table 17 helper — Census 2020 ZCTA -> county
+ref_geo_zcta_county:              # Table 17 helper â€” Census 2020 ZCTA -> county
   loader: geo_zcta
   releases:
   - period: '2020'
@@ -1233,7 +1233,7 @@ ref_geo_zcta_county:              # Table 17 helper — Census 2020 ZCTA -> coun
     file: CENSUS/ZCTA2020
     members:
       rel: 'tab20_zcta520_county20_natl*.txt'
-ref_quality_hospital:             # Table 19 — Care Compare hospital information + star rating
+ref_quality_hospital:             # Table 19 â€” Care Compare hospital information + star rating
   loader: quality_hospital
   releases:
   - period: 2026-09
@@ -1243,7 +1243,7 @@ ref_quality_hospital:             # Table 19 — Care Compare hospital informati
     file: CARECOMPARE/2026-10
     members:
       general: '*_Hospital_General_Information.csv'
-ref_quality_measure:              # Table 19 — Care Compare hospital measures (long)
+ref_quality_measure:              # Table 19 â€” Care Compare hospital measures (long)
   loader: quality_measure
   releases:
   - period: 2026-09
@@ -1256,7 +1256,7 @@ ref_quality_measure:              # Table 19 — Care Compare hospital measures 
       unplanned: '*-??_Unplanned_Hospital_Visits-Hospital.csv'
       infections: '*-??_Healthcare_Associated_Infections-Hospital.csv'
       timely: '*-??_Timely_and_Effective_Care-Hospital.csv'
-ref_quality_asc:                  # Table 19 — Care Compare ASC facility quality
+ref_quality_asc:                  # Table 19 â€” Care Compare ASC facility quality
   loader: quality_asc
   releases:
   - period: 2026-09
@@ -1266,7 +1266,7 @@ ref_quality_asc:                  # Table 19 — Care Compare ASC facility quali
     file: CARECOMPARE/2026-10
     members:
       asc: '*_ASC_Facility.csv'
-ref_ownership:                    # Table 20 — hospital owners (All Owners + CHOW owners)
+ref_ownership:                    # Table 20 â€” hospital owners (All Owners + CHOW owners)
   loader: ownership
   releases:
   - period: 2026-09
@@ -1277,7 +1277,7 @@ ref_ownership:                    # Table 20 — hospital owners (All Owners + C
     members:
       all_owners: 'Hospital_All_Owners_2026.09.29.csv'
       chow_owners: 'Hospital_CHOW_Owners_2026.09.29.csv'
-ref_chow:                         # Table 20 — hospital changes of ownership
+ref_chow:                         # Table 20 â€” hospital changes of ownership
   loader: chow
   releases:
   - period: 2026-09
@@ -1287,7 +1287,7 @@ ref_chow:                         # Table 20 — hospital changes of ownership
     file: OWNERSHIP/2026-10
     members:
       chow: 'Hospital_CHOW_2026.09.29.csv'
-ref_chow_npi:                     # Table 20 helper — NPIs of CHOW enrollments
+ref_chow_npi:                     # Table 20 helper â€” NPIs of CHOW enrollments
   loader: chow_npi
   releases:
   - period: 2026-09
@@ -1297,7 +1297,7 @@ ref_chow_npi:                     # Table 20 helper — NPIs of CHOW enrollments
     file: OWNERSHIP/2026-10
     members:
       npis: 'Hospital_CHOW_NPIs_2026.09.29.csv'
-ref_nadac:                        # Table 21 — NADAC drug prices (dates from the price start)
+ref_nadac:                        # Table 21 â€” NADAC drug prices (dates from the price start)
   loader: nadac
   releases:
   - period: NADAC2024
@@ -1315,7 +1315,7 @@ ref_nadac:                        # Table 21 — NADAC drug prices (dates from t
     file: NADAC/2026
     members:
       nadac: 'nadac-national-average-drug-acquisition-cost-*.csv'
-ref_ndc_product:                  # Table 21 — FDA NDC directory, products
+ref_ndc_product:                  # Table 21 â€” FDA NDC directory, products
   loader: ndc_product
   releases:
   - period: 2026-10
@@ -1325,7 +1325,7 @@ ref_ndc_product:                  # Table 21 — FDA NDC directory, products
     file: FDA_NDC/2026-10
     members:
       product: 'product.txt'
-ref_ndc_package:                  # Table 21 — FDA NDC directory, packages (ndc11)
+ref_ndc_package:                  # Table 21 â€” FDA NDC directory, packages (ndc11)
   loader: ndc_package
   releases:
   - period: 2026-10
@@ -1335,7 +1335,7 @@ ref_ndc_package:                  # Table 21 — FDA NDC directory, packages (nd
     file: FDA_NDC/2026-10
     members:
       package: 'package.txt'
-ref_asp:                          # Table 10a — ASP payment limits + NOC drugs (508 CSV per quarter folder)
+ref_asp:                          # Table 10a â€” ASP payment limits + NOC drugs (508 CSV per quarter folder)
   loader: asp
   releases:
   - period: 2024Q1
@@ -1406,7 +1406,7 @@ ref_asp:                          # Table 10a — ASP payment limits + NOC drugs
     file: ASP/2026Q4
     members:
       pricing: '*508*Payment Limit File*.csv'
-ref_ndc_hcpcs:                    # Table 10b — NDC-HCPCS crosswalks (ASP, OPPS, AWP, NOC, PrEP)
+ref_ndc_hcpcs:                    # Table 10b â€” NDC-HCPCS crosswalks (ASP, OPPS, AWP, NOC, PrEP)
   loader: ndc_hcpcs
   releases:
   - period: 2024Q1
@@ -1582,12 +1582,1236 @@ ref_hcpcs_code:                   # HCPCS Level II quarterly file (code names, s
       anweb: 'HCPC2026_OCT_ANWEB*.xlsx'
 
 
-# Add to config/sources_local.yaml (build PC) — one release per hospital x download period.
+# Add to config/sources_local.yaml (build PC) â€” one release per hospital x download period.
 # effective_start = the file's last_updated_on (OSU and James files are dated 7/1/2026).
 # When a newer file for the same CCN is loaded, set this release's effective_end to the day before.
-ref_hospital_mrf:                 # Step 2 — hospital price transparency files
+ref_hospital_mrf:                 # Step 2 â€” hospital price transparency files
   loader: hospital_mrf
   releases:
+  - period: "2026-10"
+    ccn: "360075"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/360075
+    members:
+      mrf: "341924226-1669562864_university-hospitals-health-system_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "360359"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/360359
+    members:
+      mrf: "360359__264827222-1609189604_university-hospitals-health-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360036"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/360036
+    members:
+      mrf: "346003129_city-of-wooster-_standardchargesCDM.csv"
+  - period: "2026-10"
+    ccn: "360107"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/360107
+    members:
+      mrf: "344428205_bellevue-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360032"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/360032
+    members:
+      mrf: "341623770_joint-township-district-memorial-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "363302"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/363302
+    members:
+      mrf: "341567805-1518042175_university-hospitals-health-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360041"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member3
+    file: MRF/2026-10/360041
+    members:
+      mrf: "340827442-1164481677_university-hospitals-health-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "363048"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/363048
+    members:
+      mrf: "882938423_ClearSky-Rehabilitation-Hospital-of-Lancaster_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "363034"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/363034
+    members:
+      mrf: "451441844_Encompass-Health-Rehabilitation-Hospital-of-Cincinnati_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "360019"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/360019
+    members:
+      mrf: "360019__261375072_summa-health-system_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360125"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/360125
+    members:
+      mrf: "340726081_ashtabula-county-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362015"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/362015
+    members:
+      mrf: "34-0714479_grace-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360351"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member4
+    file: MRF/2026-10/360351
+    members:
+      mrf: "261130649_crystal-clinic-orthopaedic-center-llc_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361329"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/361329
+    members:
+      mrf: "WMH-MRF-PT-4.8-4-increased (1).csv"
+  - period: "2026-10"
+    ccn: "360059"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360059
+    members:
+      mrf: "346004382_metrohealth-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361314"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/361314
+    members:
+      mrf: "344441792_HB-Magruder-Memorial-Hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360009"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360009
+    members:
+      mrf: "344434676_lima-memorial-health-system_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360259"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360259
+    members:
+      mrf: "341883132_baypark-community-hospital_standardcharges 4.csv"
+  - period: "2026-10"
+    ccn: "360058"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360058
+    members:
+      mrf: "34-1623770_grand-lake-health-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360197"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360197
+    members:
+      mrf: "341407259_mary-rutan-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360185"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360185
+    members:
+      mrf: "341041385_salem-regional-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "361318"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/361318
+    members:
+      mrf: "340898745_fostoria-hospital-association_standardcharges 4.csv"
+  - period: "2026-10"
+    ccn: "360155"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360155
+    members:
+      mrf: "340753531_southwest-general-health-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360092"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360092
+    members:
+      mrf: "316402480_Memorial-Hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "363305"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/363305
+    members:
+      mrf: "314379441_nationwide-childrens-hospital_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "361337"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/361337
+    members:
+      mrf: "311518658_pomerene-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360076"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360076
+    members:
+      mrf: "311079309_atrium-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "363300"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/363300
+    members:
+      mrf: "310833936_childrens-hospital-medical-center_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "360008"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360008
+    members:
+      mrf: "310678022_southern-ohio-medical-center_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "363306"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/363306
+    members:
+      mrf: "310672132_Dayton-Childrens-Hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360051"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360051
+    members:
+      mrf: "310537504_miami-valley-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360174"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/360174
+    members:
+      mrf: "310537095_upper-valley-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "363035"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member2)
+    file: MRF/2026-10/363035
+    members:
+      mrf: "271952573_Summa-Rehabilitation-Hosptial_Standard-Charges (1).csv"
+  - period: "2026-10"
+    ccn: "360150"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member6 re-download, same file
+    file: MRF/2026-10/360150
+    members:
+      mrf: "263536780_western-reserve-llc_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360095"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member6 re-download, same file
+    file: MRF/2026-10/360095
+    members:
+      mrf: "341369963_Blanchard-Valley-Regional-Health-Center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360054"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member6 re-download, same file
+    file: MRF/2026-10/360054
+    members:
+      mrf: "2026_314379491_holzer-medical-center_standard-charges.json.csv"
+  - period: "2026-10"
+    ccn: "360040"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: member6 re-download, same file
+    file: MRF/2026-10/360040
+    members:
+      mrf: "download.aspx.json"
+  - period: "2026-10"
+    ccn: "363308"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/363308
+    members:
+      mrf: "362193608_Shriners-Childrens-Ohio_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361326"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361326
+    members:
+      mrf: "812817266_ADAMS-COUNTY-REGIONAL-MEDICAL-CENTER_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361325"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361325
+    members:
+      mrf: "344451872_galion-community-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361321"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361321
+    members:
+      mrf: "340719172_Barnesville-Hospital-Association-Inc._standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361316"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361316
+    members:
+      mrf: "274283931_bucyrus-community-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361311"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361311
+    members:
+      mrf: "341571750_Harrison-Community-Hospital-Inc._standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361303"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361303
+    members:
+      mrf: "340718390_lodi-community-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361302"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361302
+    members:
+      mrf: "275401105-1629050240_twin-city-hospital-corporation_standardcharges.json"
+  - period: "2026-10"
+    ccn: "361300"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/361300
+    members:
+      mrf: "346405718_Paulding-County-Hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360361"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/360361
+    members:
+      mrf: "453215312_portsmouth-hospital-corporation_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360355"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member5)
+    file: MRF/2026-10/360355
+    members:
+      mrf: "205882991_Ohio-Valley-Medical-Center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362036"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362036
+    members:
+      mrf: "20-3802570_Regency_Hospital_of_Toledo_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362031"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362031
+    members:
+      mrf: "03-0508537_Select_Specialty_Hospital-Southeast_Ohio_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362029"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362029
+    members:
+      mrf: "20-5457719_Regency_Hospital_of_Cleveland_East_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362027"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362027
+    members:
+      mrf: "26-3643089_Select_Specialty_Hospital-Akron_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362026"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362026
+    members:
+      mrf: "81-1476363_Select_Specialty_Hospital-Cleveland_Fairhill_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362023"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362023
+    members:
+      mrf: "88-1391845_Select_Specialty_Hospital-Boardman_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362022"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362022
+    members:
+      mrf: "25-1816235_Select_Specialty_Hospital-Columbus_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362019"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362019
+    members:
+      mrf: "31-1574892_Select_Specialty_Hospital-Cincinnati_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "362016"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/362016
+    members:
+      mrf: "43-1742017_Select_Specialty_Hospital-Canton_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360352"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360352
+    members:
+      mrf: "421562638_surgery-center-at-southwoods_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360245"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360245
+    members:
+      mrf: "341789783_glenbeigh_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360211"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360211
+    members:
+      mrf: "341842025-1285715144_trinity-hospital-holding-company_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360131"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360131
+    members:
+      mrf: "1942385794_alliance-community-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360096"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360096
+    members:
+      mrf: "1127LH_EastLiverpoolCityHospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360071"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360071
+    members:
+      mrf: "34-4429514_Van Wert_Standardcharges.json"
+  - period: "2026-10"
+    ccn: "360048"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360048
+    members:
+      mrf: "340967014_TheUniversityofToledoMedicalCenter_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360029"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360029
+    members:
+      mrf: "344440884_wood-county_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360013"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member4)
+    file: MRF/2026-10/360013
+    members:
+      mrf: "344427944_shelby-county-memorial-hospital-association_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361331"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361331
+    members:
+      mrf: "852985806_adena-fayette-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360365"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360365
+    members:
+      mrf: "474992388_avita-ontario-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361309"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361309
+    members:
+      mrf: "344477047_henry-county-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361322"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361322
+    members:
+      mrf: "344429941_Blanchard-Valley-Regional-Health-Center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "363303"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/363303
+    members:
+      mrf: "340714357_childrens-hospital-medical-center-of-akron_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360218"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360218
+    members:
+      mrf: "314379519_licking-memorial-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360159"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360159
+    members:
+      mrf: "314379443_adena-health-system_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360012"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360012
+    members:
+      mrf: "311439334-1982784535_Mount-Carmel-East_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361334"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361334
+    members:
+      mrf: "311072406_pike-health-services-inc_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361304"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361304
+    members:
+      mrf: "310993422_greenfield-area-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361330"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361330
+    members:
+      mrf: "310733259_hocking_valley_standardcharges (1).csv"
+  - period: "2026-10"
+    ccn: "360239"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360239
+    members:
+      mrf: "310621866_1043233984_kettering-medical-center-_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360368"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360368
+    members:
+      mrf: "310621866_1023587045_kettering-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360133"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360133
+    members:
+      mrf: "310564121_1053339507_dayton-osteopathic-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360132"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360132
+    members:
+      mrf: "310536662_1104867167_fort-hamilton-hospital_standardcharges (1).json"
+  - period: "2026-10"
+    ccn: "360360"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360360
+    members:
+      mrf: "270712680_1760764849_beavercreek-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "361320"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/361320
+    members:
+      mrf: "2026_311724085_holzer-medical-center-jackson_standard-charges.json.csv"
+  - period: "2026-10"
+    ccn: "360189"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360189
+    members:
+      mrf: "166189498_madison-health_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360270"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: downloaded by hand (member1)
+    file: MRF/2026-10/360270
+    members:
+      mrf: "020701635_mercy-health-defiance-hospital-llc_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361324"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/361324
+    members:
+      mrf: "340714456_ohiohealth-shelby-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "361315"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/361315
+    members:
+      mrf: "314440479_hardin-memorial-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360348"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360348
+    members:
+      mrf: "314394942_dublin-methodist-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360210"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360210
+    members:
+      mrf: "314379436_grady-memorial-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360203"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360203
+    members:
+      mrf: "314391798_southeastern-ohio-regional-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360170"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360170
+    members:
+      mrf: "384105653_berger-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360152"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360152
+    members:
+      mrf: "314394942_doctors-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360147"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mhsystem.org/patient-visitors/price-list/
+    file: MRF/2026-10/360147
+    members:
+      mrf: "Download.aspx.csv"
+  - period: "2026-10"
+    ccn: "360118"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360118
+    members:
+      mrf: "310714456_ohiohealth-mansfield-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360109"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://coshoctonhospital.org/for-patients-visitors/financial-assistance/
+    file: MRF/2026-10/360109
+    members:
+      mrf: "1129LH_CoshoctonRegionalMedicalCenter_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360072"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.fmchealth.org/patients-visitors/billing-financial-assistance/
+    file: MRF/2026-10/360072
+    members:
+      mrf: "310645626_fairfield-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360065"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.fishertitus.org/rights-and-policies/price-transparency
+    file: MRF/2026-10/360065
+    members:
+      mrf: "344430716_Fisher_Titus_Medical_Center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360039"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://genesishcs.org/patients/billing-insurance/price-list
+    file: MRF/2026-10/360039
+    members:
+      mrf: "311480941_Genesis-Healthcare-System_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360025"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.firelands.com/patients-guests/billing-insurance/price-transparency/
+    file: MRF/2026-10/360025
+    members:
+      mrf: "341401659_20_firelands-regional-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360079"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://ketteringhealth.org/billing-insurance/patient-pricing/
+    file: MRF/2026-10/360079
+    members:
+      mrf: "310621866_1043233984_kettering-medical-center-_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360068"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.promedica.org/pay-my-bill/price-transparency-resources
+    file: MRF/2026-10/360068
+    members:
+      mrf: "360068_original_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360026"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://ketteringhealth.org/billing-insurance/patient-pricing/
+    file: MRF/2026-10/360026
+    members:
+      mrf: "310809436_1255317848_greene-memorial-hospital-inc_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360017"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360017
+    members:
+      mrf: "314394942_grant-medical-center_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360011"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360011
+    members:
+      mrf: "311070887_marion-general-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360006"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/360006
+    members:
+      mrf: "314394942_riverside-methodist-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "363309"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.nationwidechildrens.org/locations/toledo/patient-resources/pay-my-bill/price-information-list
+    file: MRF/2026-10/363309
+    members:
+      mrf: "363309_toledo_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361328"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/361328
+    members:
+      mrf: "020701635_mercy-health-defiance-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "361323"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://aultman.org/home/patients-and-visitors/insurance-and-billing/pricing#/
+    file: MRF/2026-10/361323
+    members:
+      mrf: "1891718375_aultman-orrville-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "361313"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.ohiohealth.com/billing-insurance/pre-visit-financial-checklist/healthcare-estimates-and-pricing
+    file: MRF/2026-10/361313
+    members:
+      mrf: "316402699_morrow-county-hospital-_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "361312"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/361312
+    members:
+      mrf: "310785684-1144286352_community-mercy-health-partners_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "361310"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/361310
+    members:
+      mrf: "341577110_mercy-health-willard-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "361306"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/361306
+    members:
+      mrf: "340864230_mercy-health-allen-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360375"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mountcarmelhealth.com/for-patients/billing-and-insurance/pricing-information/price-estimates
+    file: MRF/2026-10/360375
+    members:
+      mrf: "311439334-1710752183_Mount-Carmel-Dublin_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360374"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360374
+    members:
+      mrf: "844831141_mercy-health-kings-mills-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360358"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mountcarmelhealth.com/for-patients/billing-and-insurance/pricing-information/price-estimates
+    file: MRF/2026-10/360358
+    members:
+      mrf: "342032340_Diley-Ridge-Medical-Center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360354"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.uchealth.com/financial/price-transparency/#
+    file: MRF/2026-10/360354
+    members:
+      mrf: "311588499_West-Chester-Hospital_StandardCharges.json"
+  - period: "2026-10"
+    ccn: "360276"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360276
+    members:
+      mrf: "340505560-1790868982_mercy-health-youngstown-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360266"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mountcarmelhealth.com/for-patients/billing-and-insurance/pricing-information/price-estimates
+    file: MRF/2026-10/360266
+    members:
+      mrf: "311439334-1770668568_Mount-Carmel-New-Albany_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360262"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360262
+    members:
+      mrf: "344428250-1467493551_mercy-health-st-vincent-medical-center-llc_a_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360236"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360236
+    members:
+      mrf: "310830955_mercy-health-clermont-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360234"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360234
+    members:
+      mrf: "311091597_mercy-health-west-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360179"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.trihealth.com/patients-and-visitors/billing-and-insurance/pricing-estimates
+    file: MRF/2026-10/360179
+    members:
+      mrf: "310537122_BETHESDAHOSPITALINC_STANDARDCHARGES.csv"
+  - period: "2026-10"
+    ccn: "360175"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.trihealth.com/patients-and-visitors/billing-and-insurance/pricing-estimates
+    file: MRF/2026-10/360175
+    members:
+      mrf: "273633811_clinton-memorial-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360172"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360172
+    members:
+      mrf: "340714704_mercy-health-regional-medical-center-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360163"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.thechristhospital.com/patient-resources/patient-financial-services/pricing-and-estimates/price-list-and-cost
+    file: MRF/2026-10/360163
+    members:
+      mrf: "31-0538525_TheChristHospitalHealthNetwork_StandardCharges.csv"
+  - period: "2026-10"
+    ccn: "360161"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360161
+    members:
+      mrf: "340505560-1629009964_mercy-health-youngstown-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360134"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.trihealth.com/patients-and-visitors/billing-and-insurance/pricing-estimates
+    file: MRF/2026-10/360134
+    members:
+      mrf: "310537486_THEGOODSAMARITANHOSPITAL_STANDARDCHARGES.csv"
+  - period: "2026-10"
+    ccn: "360112"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360112
+    members:
+      mrf: "344428250-1467493551_mercy-health-st-vincent-medical-center-llc_v_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360089"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360089
+    members:
+      mrf: "344431174_mercy-health-tiffin-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360086"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360086
+    members:
+      mrf: "310785684-1144286402_community-mercy-health-partners_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360084"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://aultman.org/home/patients-and-visitors/insurance-and-billing/pricing#/
+    file: MRF/2026-10/360084
+    members:
+      mrf: "1356366991_aultman-hospital_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360066"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360066
+    members:
+      mrf: "341105619_mercy-health-st-ritas-medical-center-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360064"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360064
+    members:
+      mrf: "340505560-1548296106_mercy-health-youngstown-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360056"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360056
+    members:
+      mrf: "310538532_mercy-health-fairfield-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360046"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.trihealth.com/patients-and-visitors/billing-and-insurance/pricing-estimates
+    file: MRF/2026-10/360046
+    members:
+      mrf: "310650283_MCCULLOUGH-HYDEMEMORIALHOSPITALINC_STANDARDCHARGES.csv"
+  - period: "2026-10"
+    ccn: "360035"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mountcarmelhealth.com/for-patients/billing-and-insurance/pricing-information/price-estimates
+    file: MRF/2026-10/360035
+    members:
+      mrf: "311439334-1982784535_Mount-Carmel-East_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360020"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.summahealth.org/patients-and-visitors/insurance-and-billing/price-transparency
+    file: MRF/2026-10/360020
+    members:
+      mrf: "261375072_summa-health-system_standardcharges.json"
+  - period: "2026-10"
+    ccn: "360016"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360016
+    members:
+      mrf: "271408630_jewish-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "360003"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.uchealth.com/financial/price-transparency/#
+    file: MRF/2026-10/360003
+    members:
+      mrf: "311479038_University-of-Cincinnati-Medical-Center_StandardCharges.json"
+  - period: "2026-10"
+    ccn: "360001"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://www.mercy.com/pay-a-bill/estimate-your-cost
+    file: MRF/2026-10/360001
+    members:
+      mrf: "310537085_mercy-health-anderson-hospital-llc_standardcharges.ashx.csv"
+  - period: "2026-10"
+    ccn: "363038"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/363038
+    members:
+      mrf: "471069448_cleveland-clinic-rehabilitation-hospital-avon_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360364"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360364
+    members:
+      mrf: "474442902_cleveland-clinic-avon-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360180"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360180
+    members:
+      mrf: "340714585_the-cleveland-clinic-foundation_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360230"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360230
+    members:
+      mrf: "340714593-1902858152_cleveland-clinic-health-system-east-region_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360144"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360144
+    members:
+      mrf: "340714593-1235183542_cleveland-clinic-health-system-east-region_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360143"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360143
+    members:
+      mrf: "340714458_marymount-hospital-inc_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360091"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360091
+    members:
+      mrf: "340733166_medina-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360087"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360087
+    members:
+      mrf: "340714684_lutheran-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360082"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360082
+    members:
+      mrf: "340714593-1598719346_cleveland-clinic-health-system-east-region_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360077"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360077
+    members:
+      mrf: "340714618_fairview-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360070"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360070
+    members:
+      mrf: "341893439_cleveland-clinic-mercy-hospital_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360027"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360027
+    members:
+      mrf: "340714478_akron-general-medical-center_standardcharges.csv"
+  - period: "2026-10"
+    ccn: "360010"
+    effective_start: 2026-10-01   # set to the file's last_updated_on after loading
+    effective_end: 9999-12-31
+    page: https://my.clevelandclinic.org/patients/billing-finance/comprehensive-hospital-charges
+    file: MRF/2026-10/360010
+    members:
+      mrf: "340714771_the-union-hospital-association_standardcharges.csv"
   - period: "2026-10"
     ccn: "360085"
     effective_start: 2026-07-01
@@ -1604,3 +2828,4 @@ ref_hospital_mrf:                 # Step 2 — hospital price transparency files
     file: MRF/2026-10/360242
     members:
       mrf: "*standardcharges*.csv"
+

@@ -1,0 +1,10 @@
+{
+  "table": "ref_hospital_mrf",
+  "ccn": "361300",
+  "period": "2026-10",
+  "file": "MRF/2026-10/361300",
+  "member": "346405718_Paulding-County-Hospital_standardcharges.csv",
+  "stage": "load",
+  "error": "ValueError: unknown CSV layout; header starts ['2 0 obj']",
+  "at": "2026-10-26T18:03:41+00:00"
+}

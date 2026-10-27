@@ -1,0 +1,10 @@
+{
+  "table": "ref_hospital_mrf",
+  "ccn": "360359",
+  "period": "2026-10",
+  "file": "MRF/2026-10/360359",
+  "member": "360359__264827222-1609189604_university-hospitals-health-system_standardcharges.csv",
+  "stage": "load",
+  "error": "Error: CSV Error on Line: 2875409",
+  "at": "2026-10-26T18:00:24+00:00"
+}

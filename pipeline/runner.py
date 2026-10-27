@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import os
 import logging
 import shutil
 import sys
@@ -86,6 +87,8 @@ def run_table(table: str, *, data_root: str | None = None, periods: list[str] | 
     frames: list[pl.DataFrame] = []
     sources: list[SourceRecord] = []
     skipped: list[str] = []
+    # MESHKOR_ONLY_CCN="360016,360064": load only these hospitals (set by  load_ref ... --ccn). Empty = every release.
+    only_ccn = {c.strip() for c in os.environ.get("MESHKOR_ONLY_CCN", "").split(",") if c.strip()}
     # STREAM tables (ref_mpfs: ~2M rows per quarter) write each release to its own
     # file at once, so memory holds one release, not all of them.
     stream = getattr(mod, "STREAM", False)
@@ -97,6 +100,8 @@ def run_table(table: str, *, data_root: str | None = None, periods: list[str] | 
     with Timer() as t:
         for rel in spec["releases"]:
             if periods and str(rel["period"]) not in periods:
+                continue
+            if only_ccn and str(rel.get("ccn")) not in only_ccn:
                 continue
             label = f"{rel['period']}" + (f"/{rel['setting']}" if rel.get("setting") else "")
             try:
@@ -167,8 +172,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Load MeshKor Step 1 reference tables")
     ap.add_argument("tables", nargs="+", help="table names or 'all'")
     ap.add_argument("--period", action="append", help="only this period (repeatable)")
+    ap.add_argument("--ccn", action="append", help="only this hospital CCN (repeatable or comma list)")
     ap.add_argument("--data-root")
     a = ap.parse_args(argv)
+    if a.ccn:
+        os.environ["MESHKOR_ONLY_CCN"] = ",".join(a.ccn)
     tables = configured_tables() if a.tables == ["all"] else a.tables
     failed = 0
     for t in tables:

@@ -18,11 +18,11 @@ if ($Page) { $args_ += @("--page",$Page) }
 Write-Host "== 1/6 intake" -ForegroundColor Cyan
 python @args_;                                            if ($LASTEXITCODE) { exit $LASTEXITCODE }
 Write-Host "== 2/6 load_ref ref_hospital_mrf" -ForegroundColor Cyan
-python backend\manage.py load_ref ref_hospital_mrf;       if ($LASTEXITCODE) { exit $LASTEXITCODE }
-Write-Host "== 3/6 build_duckdb" -ForegroundColor Cyan
-python backend\manage.py build_duckdb;                    if ($LASTEXITCODE) { exit $LASTEXITCODE }
+python backend\manage.py load_ref ref_hospital_mrf --period $Period;       if ($LASTEXITCODE) { exit $LASTEXITCODE }
+Write-Host "== 3/6 build_duckdb --only ref_hospital_mrf (fast refresh)" -ForegroundColor Cyan
+python backend\manage.py build_duckdb --only ref_hospital_mrf;                    if ($LASTEXITCODE) { exit $LASTEXITCODE }
 Write-Host "== 4/6 verify" -ForegroundColor Cyan
-python -m pipeline.hpt.verify;                            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+python -m pipeline.hpt.verify --period $Period --quarantine;                            if ($LASTEXITCODE) { exit $LASTEXITCODE }
 Write-Host "== 5/6 quality" -ForegroundColor Cyan
 python -m pipeline.hpt.quality --ccn $Ccn --period $Period; if ($LASTEXITCODE) { exit $LASTEXITCODE }
 Write-Host "== 6/6 progress" -ForegroundColor Cyan

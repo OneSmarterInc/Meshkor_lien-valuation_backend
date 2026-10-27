@@ -10,6 +10,22 @@ from pathlib import Path
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_env(path: Path) -> None:
+    """Minimal .env reader (KEY=VALUE). Real environment variables win. Same rule as
+    backend/meshkor/settings.py, so `python -m pipeline.hpt.run` and manage.py see the
+    same MESHKOR_RAW_DIR / MESHKOR_DATA_ROOT / MESHKOR_SOURCES (Oct 23, 2026)."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+_load_env(PROJECT_ROOT / ".env")
 OPEN_END = date(9999, 12, 31)
 
 

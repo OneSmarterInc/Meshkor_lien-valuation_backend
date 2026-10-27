@@ -1,3 +1,5 @@
+import os
+
 from django.core.management.base import BaseCommand, CommandError
 
 from pipeline.runner import configured_tables
@@ -11,8 +13,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("tables", nargs="+", help="e.g. ref_mpfs ref_asc, or 'all'")
         parser.add_argument("--period", action="append", help="only this period (repeatable)")
+        parser.add_argument("--ccn", action="append",
+                            help="only this hospital CCN (repeatable, or a comma list: --ccn 360016,360064). ref_hospital_mrf only.")
 
     def handle(self, *args, tables, period, **opts):
+        if opts.get("ccn"):
+            os.environ["MESHKOR_ONLY_CCN"] = ",".join(opts["ccn"])
         known = configured_tables()
         tables = known if tables == ["all"] else tables
         unknown = [t for t in tables if t not in known]
