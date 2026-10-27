@@ -55,19 +55,64 @@ def name_tokens(s: str) -> set[str]:
     return {t for t in re.findall(r"[a-z0-9]+", (s or "").lower()) if t not in STOP and len(t) > 2}
 
 
-def best_ccn(location_name: str, hospitals: pl.DataFrame) -> tuple[str | None, float]:
-    """Pick the hospital whose name shares the most tokens with the location name."""
-    lt = name_tokens(location_name)
-    best, score = None, 0.0
-    for ccn, name, dba in zip(hospitals["ccn"], hospitals["hospital_name"], hospitals["dba_name"]):
-        for cand in (name, dba):
-            ct = name_tokens(cand)
-            if not ct or not lt:
+def common_tokens(blocks: list[dict]) -> set[str]:
+    """Tokens that appear in a third or more of a site's location names ("cleveland", "clinic",
+    "mercy"...). They name the system, not the hospital, so they cannot decide a match."""
+    if len(blocks) < 3:
+        return set()
+    from collections import Counter
+    c = Counter(t for b in blocks for t in name_tokens(b.get("location_name") or ""))
+    return {t for t, n in c.items() if n >= max(2, len(blocks) / 3)}
+
+
+def best_ccn(location_name: str, hospitals: pl.DataFrame, common: set[str] | None = None) -> tuple[str | None, float]:
+    """Pick the hospital whose name best matches the location name, or None.
+
+    Rules (Oct 23, 2026, after "Cleveland Clinic Weston" in Florida matched an Ohio CCN):
+      - system words (common to many locations on the site) are ignored; the DISTINCT words must match
+      - a location with distinct words that match no candidate is unmatched
+      - a tie between two candidates is unmatched (ambiguous), never a guess
+      - a candidate that contains every distinct word of the location name wins (not the reverse:
+        "Avon Hospital" inside "Cleveland Clinic Rehabilitation Hospital, Avon" is a different hospital)
+    """
+    common = common or set()
+    lt_all = name_tokens(location_name)
+    lt = lt_all - common
+    if not lt:
+        # only system words left ("Miami Valley Hospital" on a site where 8 of 12 locations start with
+        # Miami Valley): accept a candidate whose whole name equals the location name, nothing looser
+        exact = [ccn for ccn, name, dba in zip(hospitals["ccn"], hospitals["hospital_name"], hospitals["dba_name"])
+                 if lt_all and (name_tokens(name) == lt_all or name_tokens(dba) == lt_all)]
+        return (exact[0], 1.0) if len(exact) == 1 else (None, 0.0)
+    scores: list[tuple[float, str]] = []
+    for ccn, name, dba, city in zip(hospitals["ccn"], hospitals["hospital_name"], hospitals["dba_name"],
+                                    hospitals["city"] if "city" in hospitals.columns else [None] * hospitals.height):
+        best_c = 0.0
+        for cand in (name, dba, f"{name} {city or ''}"):
+            ct = name_tokens(cand) - common
+            if not ct:
                 continue
-            s = len(lt & ct) / max(len(lt), 1)
-            if s > score:
-                best, score = ccn, s
-    return (best, score) if score >= 0.5 else (None, score)
+            shared = lt & ct
+            if not shared:
+                continue
+            s = len(shared) / len(lt | ct)
+            if lt <= ct:                         # every distinct word of the location is in the candidate
+                s = max(s, 0.5 + 0.5 * len(lt) / len(ct))
+            best_c = max(best_c, s)
+        if best_c > 0:
+            scores.append((best_c, ccn))
+    if not scores:
+        return None, 0.0
+    scores.sort(reverse=True)
+    top, ccn = scores[0]
+    if top <= 0.5:                              # half the words in common is a guess, not a match
+        return None, top
+    if len(scores) > 1 and scores[1][0] == top and scores[1][1] != ccn:
+        names = {str(hospitals.filter(pl.col("ccn") == c)["hospital_name"][0]).strip().lower() for sc, c in scores if sc == top}
+        if len(names) > 1:
+            return None, top                    # two different hospitals score the same: ambiguous
+        # same hospital under two CCNs (swing-bed / sub-unit twins): the first wins
+    return ccn, top
 
 
 def fetch(url: str, timeout: int) -> tuple[int, str]:
@@ -86,6 +131,12 @@ def run(data_root: str | None = None, only: list[str] | None = None, timeout: in
         hosp = hosp.filter(pl.col("ccn").is_in(only))
     sites = pl.read_csv(config.PROJECT_ROOT / "config" / "hospital_sites.csv", infer_schema_length=0)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # optional column location_name in hospital_sites.csv: the exact name this CCN uses in its cms-hpt.txt
+    pinned = {}
+    if "location_name" in sites.columns:
+        for r in sites.filter(pl.col("ccn").is_not_null() & (pl.col("ccn") != "") & pl.col("location_name").is_not_null()
+                              & (pl.col("location_name") != "")).iter_rows(named=True):
+            pinned[r["location_name"].strip().lower()] = r["ccn"]
     rows, seen_sites = [], {}
     for h in hosp.iter_rows(named=True):
         site = h.get("website")
@@ -113,8 +164,11 @@ def run(data_root: str | None = None, only: list[str] | None = None, timeout: in
                          "note": f"no cms-hpt.txt at {candidates[0]} (status {status})"})
             continue
         matched = False
+        common = common_tokens(blocks)
         for b in blocks:
-            ccn, score = best_ccn(b["location_name"], hosp)
+            loc = (b["location_name"] or "").strip().lower()
+            pin = next((c for name, c in pinned.items() if name == loc or name in loc), None)
+            ccn, score = (pin, 1.0) if pin else best_ccn(b["location_name"], hosp, common)
             if ccn == h["ccn"]:
                 matched = True
                 rows.append({**_base(h, now), "method": "cms-hpt", "http_status": status, "hpt_txt_url": used,

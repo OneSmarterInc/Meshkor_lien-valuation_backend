@@ -86,6 +86,8 @@ def collect(data_root: str | None = None) -> tuple[list[dict], dict]:
     mdir = paths.manifests / "ref_hospital_mrf"
     if mdir.exists():
         for mf in mdir.glob("*.json"):
+            if mf.name.endswith(".quarantine.json"):
+                continue
             m = json.loads(mf.read_text(encoding="utf-8"))
             c = str(m.get("ccn")); e = loaded.setdefault(c, {"periods": [], "rows": 0, "last_updated_on": None, "name": m.get("hospital_name")})
             e["periods"].append(str(m.get("period"))); e["rows"] += int(m.get("rows") or 0)
@@ -95,7 +97,7 @@ def collect(data_root: str | None = None) -> tuple[list[dict], dict]:
     verified: dict[str, str] = {}
     vr = paths.root / "reports" / "verify_hpt.md"
     if vr.exists():
-        for m in re.finditer(r"\|\s*(\d{6})\s*\|\s*(\d{4}-\d{2})\s*\|.*?\|\s*(\d+) pass\s*/\s*(\d+) fail", vr.read_text(encoding="utf-8")):
+        for m in re.finditer(r"^\|\s*(\d{6})\s*\|\s*(\d{4}-\d{2})\s*\|[^|]*\|\s*(\d+)\s*\|\s*(\d+)\s*\|", vr.read_text(encoding="utf-8"), re.M):
             verified[m.group(1)] = "pass" if m.group(4) == "0" else f"{m.group(4)} fail"
         if not verified:   # fall back: any PASS/FAIL words per CCN heading
             for sec in re.split(r"\n#+ ", vr.read_text(encoding="utf-8")):
@@ -163,14 +165,76 @@ def write(rows, totals, paths) -> tuple[Path, Path]:
     return out_md, out_csv
 
 
+def write_status_xlsx(rows, totals, paths) -> Path | None:
+    """data/reports/hpt_status.xlsx: the readable workbook (3 small sheets), built from the same facts."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return None
+    WORDS = {5: "Done (in database, verified)", 4: "Loaded (not yet verified)", 3: "Downloaded (not yet loaded)",
+             2: "Link found (not downloaded)", 1: "Website known (not tried)", 0: "No website known"}
+    led = {}
+    lp = paths.root / "reports" / "hpt_ledger.csv"
+    if lp.exists():
+        for r in _csv(lp):
+            led[r["ccn"]] = r
+    wb = Workbook()
+    s1 = wb.active; s1.title = "Summary"
+    s1.append(["Hospital price files: status", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")])
+    s1.append([]); s1.append(["Hospitals in Ohio", totals["hospitals"]])
+    s1.append(["Done (verified in database)", totals["by_stage"].get(5, 0)])
+    s1.append(["Loaded, verify pending", totals["by_stage"].get(4, 0)])
+    s1.append(["Downloaded, load pending", totals["by_stage"].get(3, 0)])
+    s1.append(["Remaining (nothing downloaded yet)", totals["by_stage"].get(0, 0) + totals["by_stage"].get(1, 0) + totals["by_stage"].get(2, 0)])
+    s1.append([]); s1.append(["Raw files on disk (GB)", totals["raw_gb"]]); s1.append(["Parquet (GB)", totals["parquet_gb"]]); s1.append(["DuckDB (GB)", totals["duckdb_gb"]])
+    s1.append([]); s1.append(["Sheet 'Hospitals' = one row per hospital. Sheet 'To do' = only the ones a person must act on."])
+    s1.column_dimensions["A"].width = 40; s1.column_dimensions["B"].width = 22
+    s1["A1"].font = Font(bold=True, size=13)
+
+    s2 = wb.create_sheet("Hospitals")
+    hdr = ["CCN", "Hospital", "System", "Tier", "Status", "File from hospital", "File dated", "Rows loaded", "Checks", "What to do"]
+    s2.append(hdr)
+    fill = {5: "C6EFCE", 4: "E2EFDA", 3: "FFF2CC", 2: "FFF2CC", 1: "FFFFFF", 0: "F2F2F2"}
+    for r in sorted(rows, key=lambda r: (r["tier"] or "9", -r["stage"], r["ccn"])):
+        L = led.get(r["ccn"], {})
+        todo = L.get("next_action", "") if L.get("state") == "parked" else ""
+        s2.append([r["ccn"], r["hospital_name"], r["system"], r["tier"], WORDS[r["stage"]], r["notes"] if False else (L.get("file") or ""),
+                   r["file_dated"], r["rows_loaded"] or None, r["verify"], todo])
+        for c in s2[s2.max_row]:
+            c.fill = PatternFill("solid", fgColor="FFC7CE" if todo else fill[r["stage"]])
+    for i, w in enumerate([9, 42, 22, 5, 30, 48, 11, 12, 8, 60], 1):
+        s2.column_dimensions[get_column_letter(i)].width = w
+    for c in s2[1]:
+        c.font = Font(bold=True)
+    s2.freeze_panes = "A2"; s2.auto_filter.ref = s2.dimensions
+
+    s3 = wb.create_sheet("To do")
+    s3.append(["CCN", "Hospital", "Reason", "Detail", "What to do"])
+    for r in sorted(rows, key=lambda r: (r["tier"] or "9", r["ccn"])):
+        L = led.get(r["ccn"], {})
+        if L.get("state") == "parked":
+            s3.append([r["ccn"], r["hospital_name"], L.get("code", ""), L.get("detail", "")[:120], L.get("next_action", "")])
+    for i, w in enumerate([9, 42, 14, 60, 60], 1):
+        s3.column_dimensions[get_column_letter(i)].width = w
+    for c in s3[1]:
+        c.font = Font(bold=True)
+    s3.freeze_panes = "A2"; s3.auto_filter.ref = s3.dimensions
+    out = paths.root / "reports" / "hpt_status.xlsx"
+    wb.save(out)
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-root", default=None)
     a = ap.parse_args(argv)
     rows, totals = collect(a.data_root)
     md, csvp = write(rows, totals, config.data_paths(a.data_root))
+    xl = write_status_xlsx(rows, totals, config.data_paths(a.data_root))
     print(f"{totals['loaded']} of {totals['hospitals']} loaded, {totals['remaining']} remaining | raw {totals['raw_gb']} GB, parquet {totals['parquet_gb']} GB")
-    print(f"-> {md}\n-> {csvp}")
+    print(f"-> {md}\n-> {csvp}" + (f"\n-> {xl}   (open this one)" if xl else ""))
     return 0
 
 

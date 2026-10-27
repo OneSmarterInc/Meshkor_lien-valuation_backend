@@ -41,13 +41,13 @@ def report(ccn: str, period: str, paths, con) -> Path:
         sum(CASE WHEN negotiated_dollar < 0 OR gross_charge < 0 THEN 1 ELSE 0 END),
         sum(CASE WHEN negotiated_dollar IS NOT NULL AND negotiated_dollar < 5 AND gross_charge >= 50 THEN 1 ELSE 0 END),
         sum(CASE WHEN code_1 IS NULL AND code_2 IS NULL AND code_3 IS NULL AND code_4 IS NULL THEN 1 ELSE 0 END),
-        sum(CASE WHEN hcpcs IS NULL AND ms_drg IS NULL AND apr_drg IS NULL AND rc IS NULL AND ndc IS NULL AND cdm IS NULL THEN 1 ELSE 0 END)
+        sum(CASE WHEN hcpcs IS NULL AND ms_drg IS NULL AND apr_drg IS NULL AND rc IS NULL AND ndc IS NULL AND cdm IS NULL AND COALESCE(code_other, NULL) IS NULL THEN 1 ELSE 0 END)
         FROM __T__""")
     settings = con.execute(f"SELECT setting, count(*) FROM {base} GROUP BY 1 ORDER BY 2 DESC").fetchall()
     types = con.execute(f"""SELECT t, count(*) FROM (SELECT code_1_type t FROM {base} UNION ALL SELECT code_2_type FROM {base}
                              UNION ALL SELECT code_3_type FROM {base}) WHERE t IS NOT NULL GROUP BY 1 ORDER BY 2 DESC""").fetchall()
-    payers = con.execute(f"""SELECT payer_group, count(DISTINCT payer_name || '|' || coalesce(plan_name,'')) plans, count(*) rows_,
-                              sum(CASE WHEN negotiated_dollar IS NOT NULL THEN 1 ELSE 0 END) dollar_rows
+    payers = con.execute(f"""SELECT payer_group, count(DISTINCT payer_name || '|' || coalesce(plan_name,'')) AS plans, count(*) AS rows_,
+                              sum(CASE WHEN negotiated_dollar IS NOT NULL THEN 1 ELSE 0 END) AS dollar_rows
                               FROM {base} GROUP BY 1 ORDER BY 3 DESC""").fetchall()
     other = con.execute(f"SELECT payer_name, plan_name, count(*) FROM {base} WHERE payer_group = 'Other' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 15").fetchall()
     pct = lambda x: f"{x:,} ({100*x/n:.1f} %)"

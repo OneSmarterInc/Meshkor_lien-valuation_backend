@@ -82,6 +82,16 @@ def write_yaml(block: str, period: str, ccn: str, sources_path: Path) -> str:
     return f"added ccn {ccn} period {period} to {sources_path.name}"
 
 
+def remove_release(period: str, ccn: str, sources_path: Path) -> bool:
+    """Delete the release block for ccn + period from sources_local.yaml (used when a file is quarantined)."""
+    text = sources_path.read_text(encoding="utf-8")
+    pat = re.compile(r'^  - period: "?' + re.escape(period) + r'"?\s*\n    ccn: "?' + re.escape(ccn) + r'"?\s*\n(?:    .*\n|\s*\n)*?(?=  - |\S|\Z)', re.M)
+    new, n = pat.subn("", text)
+    if n:
+        sources_path.write_text(new, encoding="utf-8")
+    return bool(n)
+
+
 def run(period: str, ccn: str, file: str | None, page: str, data_root: str | None, do_yaml: bool) -> int:
     if not re.fullmatch(r"\d{6}", ccn):
         raise SystemExit("ccn must be 6 digits")
