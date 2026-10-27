@@ -8,8 +8,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView  # noqa: F401  (used in urls)
 
 from cases.audit import log
-from . import throttle
+from . import mfa, throttle
 from .serializers import LoginSerializer, user_payload
+
+
+def issue_tokens(request, user) -> dict:
+    """The end of a full sign-in: clear the failed-attempt count, write the audit line, return the tokens."""
+    from django.contrib.auth.models import update_last_login
+    throttle.succeeded(user.email.lower(), throttle.client_ip(request))
+    update_last_login(None, user)                     # "Last sign-in" on the Users page
+    refresh = RefreshToken.for_user(user)
+    log(user, "Signed in")
+    return {"access": str(refresh.access_token), "refresh": str(refresh), "user": user_payload(user)}
 
 
 class LoginView(APIView):
@@ -30,16 +40,19 @@ class LoginView(APIView):
         if user is None:
             throttle.failed(email, ip)
             return Response({"detail": "Wrong email or password."}, status=status.HTTP_401_UNAUTHORIZED)
-        throttle.succeeded(email, ip)
         if not hasattr(user, "profile"):
             return Response({"detail": "This account has no portal role. Ask MeshKor."}, status=status.HTTP_403_FORBIDDEN)
         f = user.profile.firm
         if user.profile.role == "firm" and (f is None or not f.active):
             log(user, "Sign-in refused", "the firm is turned off")
             return Response({"detail": "Your firm's portal account is turned off. Ask MeshKor."}, status=status.HTTP_403_FORBIDDEN)
-        refresh = RefreshToken.for_user(user)
-        log(user, "Signed in")
-        return Response({"access": str(refresh.access_token), "refresh": str(refresh), "user": user_payload(user)})
+        if mfa.required():
+            # Right password. The sign-in ends only after the Google Authenticator code (accounts/mfa.py),
+            # so the failed-attempt count is not cleared yet.
+            tf = getattr(user, "two_factor", None)
+            stage = "verify" if (tf is not None and tf.confirmed) else "setup"
+            return Response({"mfa": stage, "mfa_token": mfa.challenge(user, stage)})
+        return Response(issue_tokens(request, user))
 
 
 class MeView(APIView):

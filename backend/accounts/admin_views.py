@@ -116,8 +116,9 @@ class AdminFirm(APIView):
 
 def user_row(u) -> dict:
     p = getattr(u, "profile", None)
+    tf = getattr(u, "two_factor", None)
     return {**user_payload(u), "first_name": u.first_name, "last_name": u.last_name, "active": u.is_active,
-            "last_login": u.last_login, "date_joined": u.date_joined}
+            "last_login": u.last_login, "date_joined": u.date_joined, "mfa_enabled": bool(tf and tf.confirmed)}
 
 
 class UserIn(serializers.Serializer):
@@ -147,7 +148,7 @@ class AdminUsers(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        qs = User.objects.select_related("profile", "profile__firm").filter(profile__isnull=False).order_by("email")
+        qs = User.objects.select_related("profile", "profile__firm", "two_factor").filter(profile__isnull=False).order_by("email")
         role = request.query_params.get("role")
         if role:
             qs = qs.filter(profile__role=role)
@@ -243,6 +244,21 @@ class AdminUserResetPassword(APIView):
         end_sessions(u)
         log(request.user, "Password reset", u.email)
         return Response({"temporary_password": pw})
+
+
+class AdminUserResetMfa(APIView):
+    """A user lost the phone (and the recovery codes): remove their 2FA. They set it up again at the next sign-in."""
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk):
+        from .models import TwoFactor
+        u = get_object_or_404(User.objects.select_related("profile"), pk=pk, profile__isnull=False)
+        if u.pk == request.user.pk:
+            return Response({"detail": "Ask another admin to reset your own two-step sign-in."}, status=400)
+        n, _ = TwoFactor.objects.filter(user=u).delete()
+        end_sessions(u)
+        log(request.user, "Two-step sign-in reset", u.email)
+        return Response({**user_row(User.objects.select_related("profile").get(pk=u.pk)), "reset": bool(n)})
 
 
 # ----------------------------------------------------------------------------- own password (every user)

@@ -62,9 +62,15 @@ class CaseDetailSerializer(CaseSummarySerializer):
     bill_type = serializers.SerializerMethodField()
 
     class Meta(CaseSummarySerializer.Meta):
-        fields = CaseSummarySerializer.Meta.fields + ("report_for", "bill_type", "files", "hospital_match", "totals", "eob", "flags", "stay")
+        fields = CaseSummarySerializer.Meta.fields + ("report_for", "bill_type", "files", "hospital_match", "totals", "eob", "flags", "stay", "released")
+
+    released = serializers.SerializerMethodField()
 
     def get_bill_type(self, o): return o.bill_type or None
+
+    def get_released(self, o):
+        rr = getattr(o, "released", None) if o.status == Case.Status.SENT else None
+        return rr.public() if rr else None
 
     def get_hospital_match(self, o):
         if not o.ccn:

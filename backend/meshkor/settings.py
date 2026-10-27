@@ -157,6 +157,9 @@ MESHKOR_FILE_KEY = os.environ.get("MESHKOR_FILE_KEY", "")
 if not MESHKOR_FILE_KEY and not DEBUG and "test" not in sys.argv:
     import warnings
     warnings.warn("MESHKOR_FILE_KEY is not set; bill uploads will fail until it is.")
+# Two-step sign-in with Google Authenticator for every role (accounts/mfa.py). 1 = required (default).
+# The tests turn it off except the 2FA tests; never set 0 on a live server.
+MESHKOR_MFA_REQUIRED = (os.environ.get("MESHKOR_MFA_REQUIRED", "1") == "1") and "test" not in sys.argv
 # Who prices a new upload (see cases/processing.py): thread (default) | worker | inline. The tests use inline.
 MESHKOR_PRICING = "inline" if "test" in sys.argv else os.environ.get("MESHKOR_PRICING", "thread")
 MESHKOR_PRICING_THREADS = int(os.environ.get("MESHKOR_PRICING_THREADS", "2"))   # bills priced at the same time

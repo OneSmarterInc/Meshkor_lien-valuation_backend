@@ -25,6 +25,21 @@ DATA = Path(tempfile.mkdtemp())
 T.build(DATA)
 
 
+_LAST = [None]     # the last test that found the test DuckDB in place
+
+
+def need_testdb(test) -> None:
+    """The test DuckDB must exist. On one Windows PC it went missing in the middle of a full run (Oct 27, 2026):
+    build it again so the run goes on, and say which test ran last with the file in place, to find the cause."""
+    p = DATA / "meshkor.duckdb"
+    if not p.exists():
+        import logging
+        logging.getLogger("meshkor.tests").warning(
+            "TEST DUCKDB MISSING before %s; the last test that had it was %s. Built it again: %s", test.id(), _LAST[0], p)
+        T.build(DATA)
+    _LAST[0] = test.id()
+
+
 def bill(name):
     return (BILLS / f"{name}_TEST_bill.pdf").read_bytes()
 
@@ -38,6 +53,9 @@ def eob(name):
 
 @mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
 class ReaderAndPriceTests(SimpleTestCase):
+    def setUp(self):
+        need_testdb(self)
+
     def test_reader_gets_header_lines_and_total(self):
         b = reader.read(bill("B01"), "b.pdf")
         self.assertEqual((b.ccn, b.type_of_bill, b.payer), ("360085", "0131", "Anthem"))
@@ -318,6 +336,7 @@ class ApiBase(APITestCase):
         Profile.objects.create(user=cls.rev, role="reviewer")
 
     def setUp(self):
+        need_testdb(self)
         r = self.client.post("/api/auth/login/", {"email": "rev@mk.test", "password": "pw-12345"}, format="json")
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
 
@@ -443,7 +462,9 @@ class IntakeApiTests(ApiBase):
             cid = self.upload("B01").data["id"]
         processing.claim(cid)                                                # it started, then the server stopped
         Case.objects.filter(pk=cid).update(updated_at=timezone.now() - timedelta(minutes=31))
-        self.assertIn(cid, [c.pk for c in processing.waiting()])
+        with self.assertLogs("meshkor.cases", level="WARNING") as logs:     # expected: logged, not printed
+            self.assertIn(cid, [c.pk for c in processing.waiting()])
+        self.assertIn("stuck in processing", logs.output[0])
         self.assertEqual(Case.objects.get(pk=cid).status, "uploaded")
         self.assertTrue(processing.price_waiting_case(cid))
         self.assertEqual(Case.objects.get(pk=cid).status, "needs_review")
@@ -635,3 +656,79 @@ class ReportPdfTests(ApiBase):
         self.assertIn("MS-DRG: 481", whole)
         if out:
             Path(out, "B08_draft.pdf").write_bytes(data)
+
+
+@override_settings(MESHKOR_FILE_KEY=Fernet.generate_key().decode(), MESHKOR_UPLOAD_DIR=TMP)
+@mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
+class ReleasedReportTests(ApiBase):
+    """A sent report is frozen: the same bytes at every download (cases/release.py)."""
+
+    def send(self, name="B01"):
+        from .models import Flag
+        cid = self.upload(name, name).data["id"]
+        Flag.objects.filter(case_id=cid).update(resolved=True)
+        r = self.client.post(f"/api/cases/{cid}/approve/", {"note": ""}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        return cid
+
+    def test_the_sent_report_never_changes(self):
+        import hashlib
+        from .models import AuditEntry, CaseLine, ReleasedReport
+        cid = self.send()
+        rr = ReleasedReport.objects.get(case_id=cid)
+        a = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertEqual(a["X-Report-SHA256"], rr.pdf_sha256)
+        self.assertEqual(hashlib.sha256(a.content).hexdigest(), rr.pdf_sha256)
+        self.assertIn(rr.pdf_sha256, AuditEntry.objects.get(action="Report approved and sent").detail)
+        before = self.client.get(f"/api/cases/{cid}/report/").data
+        CaseLine.objects.filter(case_id=cid).update(payer_rate=1)            # the data changes later ...
+        Case.objects.filter(pk=cid).update(totals={"billed": 1})
+        b = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertEqual(a.content, b.content)                               # ... the released PDF does not
+        c = self.client.get(f"/api/cases/{cid}/report.csv")
+        self.assertEqual(hashlib.sha256(c.content).hexdigest(), rr.csv_sha256)
+        after = self.client.get(f"/api/cases/{cid}/report/").data
+        self.assertEqual(after["summary"], before["summary"])
+        self.assertEqual(after["released"]["pdf_sha256"], rr.pdf_sha256)
+        self.assertEqual(self.client.get(f"/api/cases/{cid}/").data["released"]["pdf_sha256"], rr.pdf_sha256)
+
+    def test_the_stored_files_are_encrypted_and_checked(self):
+        from . import release, storage
+        from .models import ReleasedReport
+        rr = ReleasedReport.objects.get(case_id=self.send())
+        raw = (storage.upload_dir() / rr.pdf_path).read_bytes()
+        self.assertNotEqual(raw[:4], b"%PDF")                                # encrypted on disk
+        self.assertEqual(release.pdf(rr)[:4], b"%PDF")
+        rr.pdf_sha256 = "0" * 64                                              # a file that does not match its SHA-256
+        with self.assertRaises(RuntimeError):
+            release.pdf(rr)
+
+    def test_a_case_sent_before_freezing_is_frozen_once(self):
+        from .models import ReleasedReport
+        cid = self.send()
+        ReleasedReport.objects.filter(case_id=cid).delete()
+        a = self.client.get(f"/api/cases/{cid}/report.pdf").content
+        rr = ReleasedReport.objects.get(case_id=cid)
+        self.assertIn("before reports were frozen", rr.note)
+        self.assertEqual(self.client.get(f"/api/cases/{cid}/report.pdf").content, a)
+        self.assertEqual(ReleasedReport.objects.filter(case_id=cid).count(), 1)
+
+    def test_a_draft_is_marked_and_not_frozen(self):
+        from .models import ReleasedReport
+        cid = self.upload("B01").data["id"]
+        r = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertIn("_DRAFT.pdf", r["Content-Disposition"])
+        self.assertNotIn("X-Report-SHA256", r)
+        self.assertIsNone(self.client.get(f"/api/cases/{cid}/report/").data["released"])
+        self.assertFalse(ReleasedReport.objects.exists())
+
+    def test_nothing_is_sent_if_the_report_cannot_be_made(self):
+        from .models import Flag
+        cid = self.upload("B01").data["id"]
+        Flag.objects.filter(case_id=cid).update(resolved=True)
+        with mock.patch("cases.release.reports.pdf_bytes", side_effect=RuntimeError("disk full")), \
+             self.assertLogs("meshkor.cases", level="ERROR") as logs:          # a fake full disk: logged, not printed
+            r = self.client.post(f"/api/cases/{cid}/approve/", {"note": ""}, format="json")
+        self.assertIn("freezing the report failed", logs.output[0])
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(Case.objects.get(pk=cid).status, "needs_review")

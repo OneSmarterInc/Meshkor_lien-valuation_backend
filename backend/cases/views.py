@@ -21,7 +21,7 @@ from rest_framework.views import APIView
 
 from accounts.models import Firm, firm_of, is_staff_role
 from accounts.serializers import FirmSerializer
-from . import processing, reports, storage
+from . import processing, release, reports, storage
 from .audit import log
 from .models import AuditEntry, Case, Flag, PayerName
 from .permissions import IsAdminRole, IsStaffRole
@@ -128,7 +128,7 @@ class CaseDetail(APIView):
         data = CaseDetailSerializer(case).data
         if not is_staff_role(request.user) and case.status != Case.Status.SENT:
             # A firm user sees progress only: no draft totals, flags or internal notes before release.
-            data["flags"], data["stay"] = [], None
+            data["flags"], data["stay"], data["eob"] = [], None, None
             data["totals"] = {k: None for k in data["totals"]}
             if case.status in (Case.Status.ERROR, Case.Status.NO_PRICE_FILE):
                 data["status_detail"] = "MeshKor is looking at this bill."
@@ -198,7 +198,8 @@ class CaseReport(APIView):
         case = get_case(request, pk)
         _released_or_staff(request, case)
         log(request.user, "Report viewed", "", case)
-        return Response(reports.build(case))
+        rr = release.released(case)          # a sent case: the frozen report, exactly as released
+        return Response(release.data(rr) if rr else {**reports.build(case), "released": None})
 
 
 def _download_allowed(request, case):
@@ -215,11 +216,14 @@ class ReportPdf(APIView):
     def get(self, request, pk):
         case = get_case(request, pk)
         _download_allowed(request, case)
-        data = reports.pdf_bytes(case, draft=case.status != Case.Status.SENT)
-        name = f"{case.case_number}_valuation_report.pdf"
-        log(request.user, "Report downloaded", name, case)
+        rr = release.released(case)
+        data = release.pdf(rr) if rr else reports.pdf_bytes(case, draft=True)
+        name = f"{case.case_number}_valuation_report.pdf" if rr else f"{case.case_number}_valuation_report_DRAFT.pdf"
+        log(request.user, "Report downloaded", f"{name}" + (f" · SHA-256 {rr.pdf_sha256}" if rr else " · draft"), case)
         resp = HttpResponse(data, content_type="application/pdf")
         resp["Content-Disposition"] = f'attachment; filename="{name}"'
+        if rr:
+            resp["X-Report-SHA256"] = rr.pdf_sha256
         return resp
 
 
@@ -229,10 +233,13 @@ class ReportCsv(APIView):
     def get(self, request, pk):
         case = get_case(request, pk)
         _download_allowed(request, case)
-        name = f"{case.case_number}_data_appendix.csv"
-        log(request.user, "Data appendix downloaded", name, case)
-        resp = HttpResponse(reports.csv_bytes(case), content_type="text/csv")
+        rr = release.released(case)
+        name = f"{case.case_number}_data_appendix.csv" if rr else f"{case.case_number}_data_appendix_DRAFT.csv"
+        log(request.user, "Data appendix downloaded", f"{name}" + (f" · SHA-256 {rr.csv_sha256}" if rr else " · draft"), case)
+        resp = HttpResponse(release.csv(rr) if rr else reports.csv_bytes(case), content_type="text/csv")
         resp["Content-Disposition"] = f'attachment; filename="{name}"'
+        if rr:
+            resp["X-Report-SHA256"] = rr.csv_sha256
         return resp
 
 
@@ -251,10 +258,18 @@ class Approve(APIView):
             return Response({"detail": f"{open_flags} flag(s) still need a decision."}, status=400)
         if getattr(settings, "MESHKOR_FOUR_EYES", False) and case.flags.filter(resolved_by=request.user).exists():
             return Response({"detail": "Another reviewer must approve a case whose flags you resolved."}, status=400)
-        case.status, case.sent_at, case.approved_by, case.approval_note = Case.Status.SENT, timezone.now(), request.user, s.validated_data["note"]
-        case.status_detail = ""
-        case.save()
-        log(request.user, "Report approved and sent", s.validated_data["note"], case)
+        try:
+            with transaction.atomic():
+                case.status, case.sent_at, case.approved_by, case.approval_note = Case.Status.SENT, timezone.now(), request.user, s.validated_data["note"]
+                case.status_detail = ""
+                case.save()
+                rr = release.freeze(case, request.user)        # the exact PDF and CSV the firm will get, kept unchanged
+        except Exception as e:  # noqa: BLE001 — nothing is sent unless the frozen report exists
+            import logging
+            logging.getLogger("meshkor.cases").exception("freezing the report failed for %s", case.case_number)
+            case.refresh_from_db()
+            return Response({"detail": f"The report could not be made, so nothing was sent ({type(e).__name__}). See the server log."}, status=500)
+        log(request.user, "Report approved and sent", (s.validated_data["note"] + " · " if s.validated_data["note"] else "") + f"PDF SHA-256 {rr.pdf_sha256}", case)
         self._notify(case)
         return Response(CaseSummarySerializer(case).data)
 

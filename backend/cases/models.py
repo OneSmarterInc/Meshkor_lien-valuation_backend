@@ -213,3 +213,23 @@ class PayerName(models.Model):
 
     def __str__(self):
         return f"{self.name} -> {self.group}"
+
+
+class ReleasedReport(models.Model):
+    """The report exactly as MeshKor released it (cases/release.py). Made once, at approval, and never changed:
+    every later download gives these same bytes, so the law firm always gets the same legal document."""
+    case = models.OneToOneField(Case, on_delete=models.CASCADE, related_name="released")
+    released_at = models.DateTimeField()
+    released_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    pdf_path = models.CharField(max_length=512)        # encrypted, relative to MESHKOR_UPLOAD_DIR
+    pdf_sha256 = models.CharField(max_length=64)       # of the PDF the firm downloads
+    pdf_bytes = models.IntegerField()
+    csv_path = models.CharField(max_length=512)
+    csv_sha256 = models.CharField(max_length=64)
+    data_path = models.CharField(max_length=512)       # the report data (JSON) shown on screen
+    data_sha256 = models.CharField(max_length=64)
+    note = models.CharField(max_length=200, blank=True)   # e.g. "frozen later from the data of …" for cases sent before this existed
+
+    def public(self) -> dict:
+        return {"released_at": self.released_at, "pdf_sha256": self.pdf_sha256, "csv_sha256": self.csv_sha256,
+                "data_sha256": self.data_sha256, "note": self.note or None}

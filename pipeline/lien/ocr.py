@@ -41,6 +41,7 @@ def _get_engine():
         except ImportError as e:  # pragma: no cover
             raise OcrNotInstalled("OCR is not installed on this server: run  python -m pip install -r requirements.txt") from e
         _engine = RapidOCR()
+        logging.getLogger("RapidOCR").setLevel(logging.WARNING)   # RapidOCR sets INFO again at start; its model paths are noise
     return _engine
 
 

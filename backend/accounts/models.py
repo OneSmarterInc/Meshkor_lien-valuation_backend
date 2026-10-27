@@ -72,3 +72,18 @@ class LoginAttempt(models.Model):
 
     class Meta:
         ordering = ["-at"]
+
+
+class TwoFactor(models.Model):
+    """Google Authenticator (TOTP, RFC 6238) for one user. See accounts/mfa.py.
+    The secret is stored encrypted; recovery codes are stored as hashes only."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="two_factor")
+    secret_enc = models.TextField()                          # Fernet-encrypted base32 secret
+    confirmed_at = models.DateTimeField(null=True, blank=True)   # null = set up started, not finished
+    last_step = models.BigIntegerField(default=0)            # last 30-second step used: a code works only once
+    recovery_hashes = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def confirmed(self) -> bool:
+        return self.confirmed_at is not None

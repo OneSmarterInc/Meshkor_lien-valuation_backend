@@ -224,6 +224,9 @@ The report as data, for the on-screen preview (the PDF is built from the same da
 ```
 `pct_of_billed` always compares the total with the billed charges of the **same lines**: when a benchmark has a value on only some lines (`coverage_pct` < 100), the % uses those lines' charges, and `note` says so. A benchmark on fewer than half of the billed charges has `pct_of_billed: null`. The cash row is present only when the hospital posts a cash price. For a self-pay bill the payer row is titled "No insurer on the bill".
 
+### Released (frozen) reports
+For a case in `sent`, `GET /report/`, `/report.pdf` and `/report.csv` return the frozen report, exactly as released (cases/release.py). The downloads carry `X-Report-SHA256`; `GET /report/` has `"released": {"released_at", "pdf_sha256", "csv_sha256", "data_sha256", "note"}` (null before `sent`); the case detail has the same `released` object. Before `sent`, the downloads are drafts named `…_DRAFT.pdf` / `…_DRAFT.csv`. Approve answers `500` and sends nothing when the report cannot be made.
+
 ### Downloads (file responses, auth required)
 | Endpoint | Content-Type | File name (Content-Disposition) |
 |---|---|---|
@@ -263,6 +266,16 @@ Reference `status`: `ok`, `partial`, `missing`. Price file `status`: `loaded`, `
 
 ### `GET /api/audit/?case={id}&page=`
 → paginated `{"at": "…", "actor": "Jane Doe (Smith & Lee LLP)", "action": "Bill uploaded", "detail": "bill.pdf · consent recorded", "case_number": "MK-2026-0101"}`, newest first.
+
+### Two-step sign-in (Google Authenticator), every role
+`POST /api/auth/login/` with the right password answers `{"mfa": "setup" | "verify", "mfa_token"}` instead of the tokens (when `MESHKOR_MFA_REQUIRED=1`, the default). The `mfa_token` lasts 10 minutes.
+- `POST /api/auth/mfa/setup/` `{"mfa_token"}` → `{"secret", "secret_grouped", "otpauth_uri", "qr_svg" (data URI), "issuer", "account"}`
+- `POST /api/auth/mfa/confirm/` `{"mfa_token", "code"}` → `{"access", "refresh", "user", "recovery_codes": [10]}`
+- `POST /api/auth/mfa/verify/` `{"mfa_token", "code"}` (6 digits, or a recovery code `abcd-efgh`) → `{"access", "refresh", "user"}` (+ `"recovery_codes_left"` after a recovery code)
+- Wrong code → `400 {"code": ["…"]}`; expired or wrong step → `401`; too many tries → `429` with `Retry-After`.
+- `GET /api/auth/mfa/` (signed in) → `{"required", "enabled", "confirmed_at", "recovery_codes_left"}`
+- `POST /api/auth/mfa/recovery-codes/` `{"code"}` (signed in, a current 6-digit code) → `{"recovery_codes": [10]}`
+- Admin: `POST /api/admin/users/{id}/reset-2fa/` → user row; user rows carry `"mfa_enabled"`.
 
 ## 6b. Admin (role `admin` only; everyone else gets `403`)
 

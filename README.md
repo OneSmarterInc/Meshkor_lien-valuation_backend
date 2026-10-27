@@ -104,7 +104,22 @@ Each user has one **role**. The role decides what the user can see and do.
 | **Users** | Add a user (firm user, reviewer or admin), edit name, email, role and firm, reset the password, turn the account off or on | A new or reset account gets a **one-time temporary password** (shown once to the admin) and must choose its own password at the next sign-in · a firm user needs a firm; staff have none · you cannot change your own role or turn yourself off · there is always at least one active admin · a reset, a role change or turning off signs the user out everywhere |
 | **Payer names** | See the insurer names on bills that the payer list did not know; say which payer group each belongs to; price the open cases again | Names match as whole words in any case and are tried before `config/payer_groups.yaml` · sent reports are never changed |
 
-Every user can change their own password (**Change password**, under the name in the menu). Every admin action is in the audit log.
+Every user can change their own password (**Password & 2FA**, under the name in the menu). Every admin action is in the audit log.
+
+### Two-step sign-in with Google Authenticator (every role, decided October 27, 2026)
+
+Every user (firm, reviewer, admin) signs in with the password **and** a 6-digit code from Google Authenticator (Microsoft Authenticator, Authy and 1Password also work).
+
+| When | What the user does |
+|---|---|
+| First sign-in | Password → install the app → scan the QR code on the screen (or type the key) → type the code → **save the 10 recovery codes** (shown once; Copy or Download .txt) |
+| Every sign-in after that | Password → the 6-digit code from the app |
+| Lost phone | "Use a recovery code" (each works once), or an admin clicks **Reset 2FA** on Admin → Users; the user sets it up again |
+| New recovery codes | **Password & 2FA** page, with a current code; the old ones stop working |
+
+Rules on the server (`backend/accounts/mfa.py`): a code changes every 30 seconds and works only once; 30 seconds of clock difference are allowed; wrong codes count in the same sign-in limit as wrong passwords, and a right password alone does not clear that count; the step between password and code lasts 10 minutes and ends when the password changes; the secret is stored encrypted with `MESHKOR_FILE_KEY`, recovery codes as keyed hashes only. The QR code is drawn on the server (`segno`) and the codes are checked on the server (`pyotp`); nothing is sent to Google or anyone else. Users see a **2FA** column on Admin → Users. `MESHKOR_MFA_REQUIRED=0` turns it off on a developer PC only; never on a live server.
+
+**Back up `MESHKOR_FILE_KEY`.** Without it, the 2FA secrets cannot be read, and every user must set up 2FA again (an admin resets each one).
 
 The first admin is made with the command below (there is no sign-up page). After that, the admin makes the other accounts on the **Users** page. The command still works for scripts:
 
@@ -171,6 +186,8 @@ The reviewer resolves each `check` flag with a short note. For an inpatient stay
 | Then | The insurer's EOB · the inpatient stay (DRG) · every bill line with its benchmarks and totals · sources with file names and SHA-256 · method · limits · sign-off |
 | Every page | Case number, "Page x of y", a PHI notice. Pages after the first have a slim header |
 | Draft | Before approval: a DRAFT watermark and a "do not rely on it" box. After approval: "Reviewed and approved by …, MeshKor, on …" |
+
+**A sent report is frozen** (`backend/cases/release.py`, decided October 27, 2026). At approval, the PDF, the CSV and the report data are made once, encrypted like the bills, and kept with their SHA-256. Every later download gives exactly those bytes, even after the code, the price files or the CMS tables change. The fingerprint is in the audit log ("Report approved and sent", "Report downloaded"), in the `X-Report-SHA256` download header, and on the Report page. Anyone can check a copy: `Get-FileHash MK-2026-0001_valuation_report.pdf` must show the same value. If the report cannot be made, nothing is sent. A draft downloads as `…_DRAFT.pdf`. A case sent before this existed is frozen the first time it is opened, and the Report page says so.
 
 To look at test PDFs: `set MESHKOR_SAVE_PDF=D:\temp` and run `python backend\manage.py test cases.tests_lien.ReportPdfTests` (with `DB_ENGINE=sqlite`).
 - The firm tells us the outcome (reduced, partly reduced, no change) and what a fair price per report would be.
@@ -512,6 +529,7 @@ python backend\manage.py verify_step1          # expect 0 fail in data\reports\v
 | `MESHKOR_SOURCES` | `sources.yaml` | `sources_local.yaml` on the build PC |
 | `MESHKOR_PRICING` | `thread` | Who prices a new upload. `thread`: the web server, in the background (nothing else to run). `worker`: the web server only queues; run `pricing_worker` too (live server with more than one web process). `inline`: the upload waits (the tests use this). |
 | `MESHKOR_PRICING_THREADS` | `2` | How many bills are priced at the same time in `thread` mode. OCR uses a lot of CPU. |
+| `MESHKOR_MFA_REQUIRED` | `1` | Two-step sign-in with Google Authenticator for every user. `0` only on a developer PC |
 | `MESHKOR_FOUR_EYES` | `0` | `1` = a different reviewer must approve a case whose flags you resolved |
 | `MESHKOR_PORTAL_URL` | `http://localhost:5173` | Link in the "report ready" email |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,…` | Website addresses allowed to call the API (production) |
