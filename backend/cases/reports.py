@@ -218,60 +218,6 @@ def csv_bytes(case: Case) -> bytes:
 
 
 def pdf_bytes(case: Case, draft: bool) -> bytes:
-    """Simple one-column PDF (reportlab). The designed layout comes with the report patch."""
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.units import inch
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
-    r = build(case)
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=0.7 * inch, rightMargin=0.7 * inch, topMargin=0.7 * inch, bottomMargin=0.7 * inch,
-                            title=f"{case.case_number} valuation report")
-    st = getSampleStyleSheet()
-    money = lambda v: f"${v:,.2f}" if v is not None else "—"
-    story = [Paragraph(r["title"] + (" — DRAFT" if draft else ""), st["Title"]),
-             Paragraph(f"Case {case.case_number} · Matter {case.matter_ref or '—'} · {case.hospital_name or 'Hospital not matched'} "
-                       f"· Service {case.service_date_from or '—'} to {case.service_date_to or '—'}", st["Normal"]),
-             Spacer(1, 10), Paragraph(r["summary_text"], st["BodyText"]), Spacer(1, 10)]
-    small = st["BodyText"].clone("small", fontSize=7, leading=9)
-    tbl = [["Benchmark", "Total", "% of billed"]] + [
-        [Paragraph(s["benchmark"] + (f"<br/><font color='#555555'>{s['note']}</font>" if s.get("note") else ""), small),
-         money(s["total"]), f"{s['pct_of_billed']} %" if s["pct_of_billed"] is not None else "—"] for s in r["summary"]]
-    t = Table(tbl, colWidths=[4.2 * inch, 1.3 * inch, 1.0 * inch])
-    t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f3a5f")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                           ("ALIGN", (1, 1), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("GRID", (0, 0), (-1, -1), 0.25, colors.grey), ("FONTSIZE", (0, 0), (-1, -1), 9)]))
-    story += [t, Spacer(1, 10)]
-    stay = r.get("stay")
-    if stay and stay.get("ms_drg"):
-        story += [Paragraph("Inpatient stay", st["Heading3"]),
-                  Paragraph(f"Valued as one MS-DRG: <b>{stay['ms_drg']}</b> {stay.get('drg_title') or ''}"
-                            f"{(', ' + str(stay['los_days']) + ' days') if stay.get('los_days') is not None else ''}. "
-                            f"DRG {'confirmed by the reviewer' if stay.get('drg_confirmed') else 'as shown on the bill, not yet confirmed'}. "
-                            f"{('Medicare: ' + stay['medicare_source'] + '.') if stay.get('medicare_source') else ''} "
-                            f"{('Posted rates for this DRG range from ' + money(stay['p10']) + ' (10th percentile) to ' + money(stay['p90']) + ' (90th).') if stay.get('p10') is not None else ''}",
-                            st["BodyText"]), Spacer(1, 10)]
-    story += [Paragraph("Lines", st["Heading3"])]
-    has_eob = any(ln.get("eob_allowed") is not None for ln in r["lines"])
-    rows = [["#", "Date", "Rev", "Code", "Units", "Description", "Charge", "Payer", "Median", "Medicare", "Cost"] + (["EOB allowed"] if has_eob else [])]
-    for ln in r["lines"]:
-        pay = money(ln["payer_rate"]) + ("*" if (ln["payer_rate"] is not None and ln.get("payer_rate_is_estimate")) else "")
-        med = "pkg" if ln.get("medicare_status") == "packaged" and not ln["medicare"] else money(ln["medicare"])
-        rows.append([ln["line_no"], ln["service_date"] or "", ln["revenue_code"], ln["hcpcs"], f"{ln['units']:g}" if ln.get("units") is not None else "",
-                     (ln["description"] or "")[:(22 if has_eob else 30)], money(ln["charge"]), pay, money(ln["median"]), med, money(ln["cost"])]
-                    + ([money(ln.get("eob_allowed"))] if has_eob else []))
-    if len(rows) == 1:
-        rows.append(["", "", "", "", "", "No priced lines yet", "", "", "", "", ""])
-    lt = Table(rows, repeatRows=1, colWidths=[0.3 * inch, 0.72 * inch, 0.38 * inch, 0.5 * inch, 0.4 * inch, (1.15 if has_eob else 1.75) * inch]
-               + [0.65 * inch] * (6 if has_eob else 5))
-    lt.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 7), ("GRID", (0, 0), (-1, -1), 0.2, colors.lightgrey),
-                            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef5")), ("ALIGN", (6, 1), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    story += [lt, Paragraph("* estimate (percentage contract or price file outside the date of service) · pkg = packaged into another Medicare payment · — = no value", small),
-              Spacer(1, 14), Paragraph("Method", st["Heading3"]), Paragraph(r["method"], st["BodyText"]),
-              Paragraph("Limits", st["Heading3"]), Paragraph(r["limits"], st["BodyText"]), Paragraph("Sources", st["Heading3"])]
-    for s in r["sources"] or [{"data": "No sources yet", "file_name": "", "dated": "", "sha256": ""}]:
-        story.append(Paragraph(f"{s['data']}: {s.get('file_name') or ''} {('dated ' + str(s['dated'])) if s.get('dated') else ''} "
-                               f"{('SHA-256 ' + s['sha256'][:16] + '…') if s.get('sha256') else ''}", st["Normal"]))
-    doc.build(story)
-    return buf.getvalue()
+    """The designed PDF (layout in report_pdf.py); the data is build(), the same as the on-screen report."""
+    from .report_pdf import build_pdf
+    return build_pdf(case, build(case), draft)

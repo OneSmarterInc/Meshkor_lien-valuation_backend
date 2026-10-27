@@ -162,6 +162,17 @@ The reviewer resolves each `check` flag with a short note. For an inpatient stay
 
 - The case shows **Ready** in **My reports**.
 - The firm downloads `MK-…_valuation_report.pdf` and `MK-…_data_appendix.csv`.
+
+**The PDF report** (`backend/cases/report_pdf.py`; the data comes from `reports.build()`, the same as the on-screen report):
+
+| Part | What it shows |
+|---|---|
+| Page 1 | MeshKor header · title · case facts (hospital, service dates, insurer, firm and side) · **billed against the strongest benchmark** (EOB allowed, else the insurer rate or the median) · a bar chart of every benchmark as a % of billed · the summary table · the summary text |
+| Then | The insurer's EOB · the inpatient stay (DRG) · every bill line with its benchmarks and totals · sources with file names and SHA-256 · method · limits · sign-off |
+| Every page | Case number, "Page x of y", a PHI notice. Pages after the first have a slim header |
+| Draft | Before approval: a DRAFT watermark and a "do not rely on it" box. After approval: "Reviewed and approved by …, MeshKor, on …" |
+
+To look at test PDFs: `set MESHKOR_SAVE_PDF=D:\temp` and run `python backend\manage.py test cases.tests_lien.ReportPdfTests` (with `DB_ENGINE=sqlite`).
 - The firm tells us the outcome (reduced, partly reduced, no change) and what a fair price per report would be.
 
 ### Case statuses
@@ -367,7 +378,8 @@ backend/                      Django project
     serializers.py            JSON shapes (match docs/API_CONTRACT.md)
     storage.py                Fernet encryption of bills and EOBs
     processing.py             the one hook into the pricing step
-    reports.py                report data, PDF (reportlab) and CSV
+    reports.py                report data and CSV
+    report_pdf.py             the designed PDF layout (reportlab)
     audit.py                  writes one audit row; never breaks a request
     tests.py, tests_lien.py   API tests and pricing tests
     lien_testdb.py            small DuckDB for the pricing tests
@@ -643,7 +655,7 @@ Bills and EOBs contain **protected health information (PHI)**. These rules are n
 | 2024–2025 price-file history | No free complete source | Use the estimate basis; archived files must be labeled as not official |
 | Inpatient Medicare | IPPS estimate without outliers or transfers | Add outlier logic and the CMS grouper if needed |
 | DRG change on the Review page | Priced again while the reviewer waits (a few seconds; an OCR bill is read again) | Keep the read lines, so only the pricing runs again |
-| PDF layout | Simple one-column report | Designed report layout |
+| PDF layout | Designed report (logo mark, case facts, chart, tables, sign-off) with PDF base fonts | Add the real MeshKor logo file when there is one |
 
 **Before going live:** a server, a domain, HTTPS, PostgreSQL backups, secrets in a vault, real email, a security review and a BAA with each vendor that sees PHI.
 

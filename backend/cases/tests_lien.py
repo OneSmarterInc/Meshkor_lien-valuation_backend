@@ -578,3 +578,60 @@ class EobApiTests(ApiBase):
         self.assertEqual(f[0]["severity"], "check")
         rep = self.client.get(f"/api/cases/{r.data['id']}/report/").data
         self.assertNotIn("eob_allowed", [x["key"] for x in rep["summary"]])
+
+
+@override_settings(MESHKOR_FILE_KEY=Fernet.generate_key().decode(), MESHKOR_UPLOAD_DIR=TMP)
+@mock.patch.dict(os.environ, {"MESHKOR_DATA_ROOT": str(DATA)})
+class ReportPdfTests(ApiBase):
+    """The designed PDF (cases/report_pdf.py). Set MESHKOR_SAVE_PDF=<folder> to keep the files and look at them."""
+
+    def pdf(self, cid):
+        r = self.client.get(f"/api/cases/{cid}/report.pdf")
+        self.assertEqual((r.status_code, r["Content-Type"]), (200, "application/pdf"))
+        out = os.environ.get("MESHKOR_SAVE_PDF")
+        return r.content, out
+
+    @staticmethod
+    def text(data):
+        import io
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(data)) as p:
+            return [pg.extract_text() or "" for pg in p.pages]
+
+    def approve(self, cid):
+        from .models import Flag
+        Flag.objects.filter(case_id=cid).update(resolved=True)
+        self.assertEqual(self.client.post(f"/api/cases/{cid}/approve/", {"note": ""}, format="json").status_code, 200)
+
+    def test_draft_and_final_outpatient_with_eob(self):
+        cid = self.upload("B01", "B01").data["id"]
+        data, out = self.pdf(cid)
+        pages = self.text(data)
+        first = pages[0]
+        for s in ("MeshKor Lien Valuation", "Reasonable value of hospital charges", "MK-2026-", "Smith & Lee LLP",
+                  "Ohio State University Hospitals", "1. Summary", "$3,501.80", "Allowed by Anthem"):
+            self.assertIn(s, first, s)
+        self.assertIn("DRAFT", first)
+        self.assertIn(f"Page 1 of {len(pages)}", first)
+        whole = "\n".join(pages)
+        for s in ("2. Line by line", "3. Sources", "4. Method", "5. Limits", "Insurer's Explanation of Benefits",
+                  "Total (11 lines)", "9,647.87 3,501.80", "not been approved"):
+            self.assertIn(s, whole, s)
+        if out:
+            Path(out, "B01_draft.pdf").write_bytes(data)
+        self.approve(cid)
+        data, out = self.pdf(cid)
+        whole = "\n".join(self.text(data))
+        self.assertIn("Reviewed and approved", whole)
+        self.assertNotIn("not been approved", whole)
+        if out:
+            Path(out, "B01_final.pdf").write_bytes(data)
+
+    def test_inpatient_pdf(self):
+        cid = self.upload("B08", "B08").data["id"]
+        data, out = self.pdf(cid)
+        whole = "\n".join(self.text(data))
+        self.assertIn("Inpatient stay", whole)
+        self.assertIn("MS-DRG: 481", whole)
+        if out:
+            Path(out, "B08_draft.pdf").write_bytes(data)
