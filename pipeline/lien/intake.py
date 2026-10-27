@@ -37,6 +37,13 @@ def _fail(case, detail: str, user=None):
     audit(user, "Processing stopped", detail, case)
 
 
+def _load_payer_names() -> None:
+    """Insurer names a MeshKor admin added on the Payer names page (cases.PayerName)."""
+    from cases.models import PayerName
+    from ..ref.hospital_mrf import set_extra_payer_names
+    set_extra_payer_names(PayerName.objects.values_list("name", "group"))
+
+
 def _read_eob(case, eob_file, bill, res, storage) -> tuple[dict | None, dict]:
     """Read the EOB and compare it with the bill. A bad EOB never stops the case: it becomes a flag."""
     try:
@@ -83,6 +90,7 @@ def process(case, drg_override: str | None = None, user=None) -> None:
         return _fail(case, f"The bill could not be read: {type(e).__name__}: {str(e)[:200]}", user)
     if drg_override:
         bill.ms_drg = drg_override
+    _load_payer_names()
     try:
         con = connect()
     except ReferenceDataMissing as e:

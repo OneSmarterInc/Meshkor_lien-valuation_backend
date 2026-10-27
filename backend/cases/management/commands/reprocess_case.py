@@ -25,8 +25,6 @@ class Command(BaseCommand):
             raise CommandError("No matching case (sent cases are not reprocessed).")
         for case in qs:
             before = case.status
-            stay = getattr(case, "stay", None)
-            keep = stay.ms_drg if (stay is not None and stay.drg_source == "reviewer" and stay.ms_drg) else None
-            processing.reprice(case, ms_drg=keep)       # a DRG the reviewer corrected stays corrected
+            processing.reprice_keeping_reviewer_drg(case)   # a DRG the reviewer corrected stays corrected
             case.refresh_from_db()
             self.stdout.write(f"{case.case_number}: {before} -> {case.status}  {case.status_detail[:120]}")

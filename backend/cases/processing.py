@@ -140,3 +140,10 @@ def resume_stuck() -> int:
 def reprice(case, ms_drg: str | None = None, user=None) -> None:
     """Price again now (the caller waits), e.g. after a reviewer changes the MS-DRG."""
     _run(case, drg_override=ms_drg, user=user)
+
+
+def reprice_keeping_reviewer_drg(case, user=None) -> None:
+    """Price again; a DRG the reviewer corrected stays corrected."""
+    stay = getattr(case, "stay", None)
+    keep = stay.ms_drg if (stay is not None and stay.drg_source == "reviewer" and stay.ms_drg) else None
+    reprice(case, ms_drg=keep, user=user)

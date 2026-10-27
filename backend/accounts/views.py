@@ -33,6 +33,10 @@ class LoginView(APIView):
         throttle.succeeded(email, ip)
         if not hasattr(user, "profile"):
             return Response({"detail": "This account has no portal role. Ask MeshKor."}, status=status.HTTP_403_FORBIDDEN)
+        f = user.profile.firm
+        if user.profile.role == "firm" and (f is None or not f.active):
+            log(user, "Sign-in refused", "the firm is turned off")
+            return Response({"detail": "Your firm's portal account is turned off. Ask MeshKor."}, status=status.HTTP_403_FORBIDDEN)
         refresh = RefreshToken.for_user(user)
         log(user, "Signed in")
         return Response({"access": str(refresh.access_token), "refresh": str(refresh), "user": user_payload(user)})

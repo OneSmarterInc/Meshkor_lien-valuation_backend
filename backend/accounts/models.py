@@ -7,6 +7,7 @@ from django.db import models
 class Firm(models.Model):
     name = models.CharField(max_length=200, unique=True)
     contact_email = models.EmailField(blank=True, help_text="Where 'report ready' mail goes")
+    active = models.BooleanField(default=True, help_text="Off = its users cannot sign in; its cases are kept")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -27,6 +28,7 @@ class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.FIRM)
     firm = models.ForeignKey(Firm, null=True, blank=True, on_delete=models.PROTECT, related_name="users")
+    must_change_password = models.BooleanField(default=False)   # set when an admin makes or resets the password
 
     def __str__(self):
         return f"{self.user.email} ({self.role})"
@@ -39,6 +41,11 @@ class Profile(models.Model):
         from django.core.exceptions import ValidationError
         if self.role == self.Role.FIRM and self.firm_id is None:
             raise ValidationError({"firm": "A firm user must belong to a firm."})
+
+
+def is_admin_role(user) -> bool:
+    p = getattr(user, "profile", None)
+    return bool(p and p.role == Profile.Role.ADMIN)
 
 
 def role_of(user) -> str | None:

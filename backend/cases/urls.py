@@ -17,4 +17,7 @@ urlpatterns = [
     path("cases/<int:pk>/feedback/", v.FeedbackView.as_view()),
     path("firms/", v.FirmList.as_view()),
     path("audit/", v.AuditList.as_view()),
+    path("admin/payer-names/", v.PayerNames.as_view()),
+    path("admin/payer-names/<int:pk>/", v.PayerNameDelete.as_view()),
+    path("admin/payer-names/reprice/", v.PayerNameReprice.as_view()),
 ]

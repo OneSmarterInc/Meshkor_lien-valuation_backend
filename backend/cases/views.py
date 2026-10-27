@@ -7,7 +7,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -23,8 +23,8 @@ from accounts.models import Firm, firm_of, is_staff_role
 from accounts.serializers import FirmSerializer
 from . import processing, reports, storage
 from .audit import log
-from .models import AuditEntry, Case, Flag
-from .permissions import IsStaffRole
+from .models import AuditEntry, Case, Flag, PayerName
+from .permissions import IsAdminRole, IsStaffRole
 from .serializers import (CaseCreateSerializer, CaseDetailSerializer, CaseSummarySerializer, DrgConfirmSerializer,
                           FeedbackSerializer, FlagSerializer, LineSerializer, NoteSerializer, ReturnSerializer,
                           StaySerializer)
@@ -41,7 +41,7 @@ def visible_cases(user):
     if is_staff_role(user):
         return qs
     firm = firm_of(user)
-    return qs.filter(firm=firm) if firm else qs.none()
+    return qs.filter(firm=firm) if (firm and firm.active) else qs.none()
 
 
 def get_case(request, pk) -> Case:
@@ -79,10 +79,12 @@ class CaseList(APIView):
             if not d.get("firm_id"):
                 return Response({"firm_id": ["Pick the firm this bill belongs to."]}, status=400)
             firm = get_object_or_404(Firm, pk=d["firm_id"])
+            if not firm.active:
+                return Response({"firm_id": ["This firm is turned off. An admin can turn it on again."]}, status=400)
         else:
             firm = firm_of(request.user)
-            if firm is None:
-                raise PermissionDenied("Your account is not linked to a firm.")
+            if firm is None or not firm.active:
+                raise PermissionDenied("Your account is not linked to an active firm.")
         with transaction.atomic():
             case = Case.objects.create(case_number=Case.next_number(), firm=firm, created_by=request.user,
                                        matter_ref=d.get("matter_ref", ""), report_for=d["report_for"],
@@ -303,7 +305,7 @@ class FirmList(APIView):
     permission_classes = [IsStaffRole]
 
     def get(self, request):
-        return Response(FirmSerializer(Firm.objects.order_by("name"), many=True).data)
+        return Response(FirmSerializer(Firm.objects.filter(active=True).order_by("name"), many=True).data)
 
 
 class AuditList(APIView):
@@ -320,3 +322,69 @@ class AuditList(APIView):
         page = pg.paginate_queryset(qs, request, view=self)
         return pg.get_paginated_response([{"at": e.at, "actor": e.actor, "action": e.action, "detail": e.detail,
                                            "case_number": e.case.case_number if e.case else None} for e in page])
+
+
+# ----------------------------------------------------------------------------- payer names (admin)
+
+class PayerNames(APIView):
+    """Insurer names on bills that the payer list did not know, and the names an admin has added."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        from pipeline.ref.hospital_mrf import payer_groups
+        added = [{"id": n.id, "name": n.name, "group": n.group, "created_at": n.created_at,
+                  "created_by": (n.created_by.get_full_name() or n.created_by.email) if n.created_by else None}
+                 for n in PayerName.objects.select_related("created_by")]
+        unknown = (Case.objects.filter(payer_group="Other").exclude(payer_name="").values("payer_name")
+                   .annotate(cases=Count("id"), open=Count("id", filter=Q(status__in=Case.OPEN_STATUSES))).order_by("-open", "payer_name"))
+        known = {n["name"].lower() for n in added}
+        return Response({"groups": payer_groups(), "names": added,
+                         "unknown": [u for u in unknown if " ".join(u["payer_name"].split()).lower() not in known]})
+
+    def post(self, request):
+        from pipeline.ref.hospital_mrf import payer_groups
+        name = " ".join(str(request.data.get("name") or "").split())
+        group = str(request.data.get("group") or "").strip()
+        if not name:
+            return Response({"name": ["Give the insurer name as the bill prints it."]}, status=400)
+        if group not in payer_groups():
+            return Response({"group": ["Pick a payer group from the list."]}, status=400)
+        if PayerName.objects.filter(name__iexact=name).exists():
+            return Response({"name": ["This name is in the list already."]}, status=400)
+        n = PayerName.objects.create(name=name, group=group, created_by=request.user)
+        log(request.user, "Payer name added", f"{name} → {group}")
+        return Response({"id": n.id, "name": n.name, "group": n.group, "open_cases": _open_cases_named(name).count()},
+                        status=status.HTTP_201_CREATED)
+
+
+def _open_cases_named(name):
+    return Case.objects.filter(status__in=Case.OPEN_STATUSES, payer_name__iexact=name).exclude(
+        status__in=[Case.Status.UPLOADED, Case.Status.PROCESSING])
+
+
+class PayerNameDelete(APIView):
+    permission_classes = [IsAdminRole]
+
+    def delete(self, request, pk):
+        n = get_object_or_404(PayerName, pk=pk)
+        log(request.user, "Payer name removed", f"{n.name} → {n.group}")
+        n.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PayerNameReprice(APIView):
+    """Price again the open cases whose bill shows this insurer name (sent cases are never changed)."""
+    permission_classes = [IsAdminRole]
+    MAX = 25
+
+    def post(self, request):
+        name = " ".join(str(request.data.get("name") or "").split())
+        if not name:
+            return Response({"name": ["Give the insurer name."]}, status=400)
+        done = []
+        for c in _open_cases_named(name)[: self.MAX]:
+            processing.reprice_keeping_reviewer_drg(c, user=request.user)
+            c.refresh_from_db()
+            done.append({"id": c.id, "case_number": c.case_number, "status": c.status, "payer_group": c.payer_group})
+        log(request.user, "Cases priced again", f"{len(done)} open case(s) with insurer {name}")
+        return Response({"repriced": done})

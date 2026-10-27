@@ -264,6 +264,30 @@ Reference `status`: `ok`, `partial`, `missing`. Price file `status`: `loaded`, `
 ### `GET /api/audit/?case={id}&page=`
 → paginated `{"at": "…", "actor": "Jane Doe (Smith & Lee LLP)", "action": "Bill uploaded", "detail": "bill.pdf · consent recorded", "case_number": "MK-2026-0101"}`, newest first.
 
+## 6b. Admin (role `admin` only; everyone else gets `403`)
+
+### Firms
+- `GET /api/admin/firms/` → `[{"id", "name", "contact_email", "active", "created_at", "users", "cases", "open_cases"}]`
+- `POST /api/admin/firms/` `{"name", "contact_email"?}` → `201` firm. A name in use (any case) → `400`.
+- `PATCH /api/admin/firms/{id}/` `{"name"?, "contact_email"?, "active"?}` → firm. `active: false`: its users cannot sign in (`403` "Your firm's portal account is turned off"), it leaves `GET /api/firms/`, and its users are signed out.
+
+### Users
+- `GET /api/admin/users/?role=&firm=` → `[user object + {"first_name", "last_name", "active", "last_login", "date_joined"}]`
+- `POST /api/admin/users/` `{"email", "name"?, "role", "firm_id"?}` → `201` user plus `"temporary_password"` (shown once). A firm user needs `firm_id`; staff get no firm.
+- `PATCH /api/admin/users/{id}/` `{"email"?, "name"?, "role"?, "firm_id"?, "active"?}` → user. `400` for: your own role or account, the last active admin, a firm user without a firm, an email in use.
+- `POST /api/admin/users/{id}/reset-password/` → `{"temporary_password"}`; the user is signed out everywhere.
+
+The `user` object (login, `/api/auth/me/`) has `"must_change_password": true` after an add or a reset; the website then shows only **Choose your own password**.
+
+### Own password (every user)
+- `POST /api/auth/password/` `{"current_password", "new_password"}` → user object, `must_change_password: false`. `400` with `new_password: [...]` when Django's password rules refuse it.
+
+### Payer names
+- `GET /api/admin/payer-names/` → `{"groups": [...], "names": [{"id", "name", "group", "created_at", "created_by"}], "unknown": [{"payer_name", "cases", "open"}]}`
+- `POST /api/admin/payer-names/` `{"name", "group"}` → `201` `{"id", "name", "group", "open_cases"}`. `group` must be one of `groups`.
+- `DELETE /api/admin/payer-names/{id}/` → `204`
+- `POST /api/admin/payer-names/reprice/` `{"name"}` → `{"repriced": [{"id", "case_number", "status", "payer_group"}]}`: open cases (not sent, at most 25) with this insurer name, priced again now; a reviewer's DRG is kept.
+
 ## 7. Checklist for the backend
 
 1. All endpoints above, with the same paths, keys and enums.

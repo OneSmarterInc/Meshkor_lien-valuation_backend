@@ -19,6 +19,7 @@ def user_payload(user) -> dict:
         "email": user.email,
         "role": p.role if p else "firm",
         "firm": FirmSerializer(p.firm).data if p and p.firm_id else None,
+        "must_change_password": bool(p and p.must_change_password),
     }
 
 

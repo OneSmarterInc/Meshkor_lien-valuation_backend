@@ -619,8 +619,8 @@ def flags(bill: Bill, res: Priced, group: str, in_force, nearest, ccr, main: str
         add("other", "info", "Self-pay: no insurer rate", "The bill shows no insurer. The report uses the median, cash price, Medicare and cost.")
     elif group == "Other":
         add("other", "check", f"Insurer “{bill.payer}” is not in the payer list: no insurer rate",
-            "The insurer rate is left empty rather than taken from an unrelated plan. Add the name to config/payer_groups.yaml "
-            "(MeshKor staff), then reprocess the case.")
+            "The insurer rate is left empty rather than taken from an unrelated plan. A MeshKor admin can add the name on the "
+            "Payer names page and price the case again.")
     if ccr is None:
         add("other", "info", "No cost-to-charge ratio for this hospital", "The cost column is empty.")
     if bill.inpatient:

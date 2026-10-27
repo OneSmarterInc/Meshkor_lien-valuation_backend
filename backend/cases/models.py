@@ -198,3 +198,18 @@ class AuditEntry(models.Model):
     class Meta:
         ordering = ["-at", "-id"]
         verbose_name_plural = "audit entries"
+
+
+class PayerName(models.Model):
+    """An insurer name, as bills print it, and the payer group it belongs to. Added by a MeshKor admin
+    on the Payer names page. Tried before the rules in config/payer_groups.yaml."""
+    name = models.CharField(max_length=200, unique=True)     # matched as a whole phrase, any case
+    group = models.CharField(max_length=100)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} -> {self.group}"

@@ -90,11 +90,23 @@ Each user has one **role**. The role decides what the user can see and do.
 |---|---|---|
 | `firm` | A lawyer or paralegal at a law firm (our customer) | Upload a bill (with an EOB if they have one). See **only their own firm's** cases. Download a report after MeshKor releases it. Give feedback on the result. |
 | `reviewer` | MeshKor staff | See every firm's cases. Check the flags, confirm the DRG, approve and send, or send back. Upload a bill on behalf of a firm (for example, when the firm emails it). |
-| `admin` | MeshKor staff | Everything a reviewer can do. Later also user management. |
+| `admin` | The person who runs MeshKor | Everything a reviewer can do, **plus** the Admin pages: law firms, users and payer names. |
 
-**The server enforces these rules, not the screen.** A firm user who asks for another firm's case gets `404 Not found`. Nothing about that case is shown.
+**Reviewer and admin are separate roles (decided October 27, 2026).** Managing accounts is the most powerful job in the portal, so only an admin does it (HIPAA "minimum necessary"). An admin can still review cases, so a small team needs only one account per person.
 
-Make users with this command (there is no sign-up page; MeshKor makes the accounts):
+**The server enforces these rules, not the screen.** A firm user who asks for another firm's case gets `404 Not found`. Nothing about that case is shown. A reviewer who calls an admin address gets `403`.
+
+### Admin pages (role `admin`)
+
+| Page | What the admin does | Rules the server keeps |
+|---|---|---|
+| **Law firms** | Add a firm, rename it, set its "report ready" email, turn it off or on | A firm that is turned off keeps its cases; its users cannot sign in, it is not in the upload list, and its users are signed out |
+| **Users** | Add a user (firm user, reviewer or admin), edit name, email, role and firm, reset the password, turn the account off or on | A new or reset account gets a **one-time temporary password** (shown once to the admin) and must choose its own password at the next sign-in · a firm user needs a firm; staff have none · you cannot change your own role or turn yourself off · there is always at least one active admin · a reset, a role change or turning off signs the user out everywhere |
+| **Payer names** | See the insurer names on bills that the payer list did not know; say which payer group each belongs to; price the open cases again | Names match as whole words in any case and are tried before `config/payer_groups.yaml` · sent reports are never changed |
+
+Every user can change their own password (**Change password**, under the name in the menu). Every admin action is in the audit log.
+
+The first admin is made with the command below (there is no sign-up page). After that, the admin makes the other accounts on the **Users** page. The command still works for scripts:
 
 ```powershell
 python backend\manage.py create_portal_user --email reviewer@meshkor.com --password "..." --role reviewer --name "Reviewer Name"
@@ -538,7 +550,7 @@ All of these run from the repository root, with `.venv` active.
 | Command | What it does |
 |---|---|
 | `python backend\manage.py runserver 8000` | Starts the API on port 8000 |
-| `python backend\manage.py create_portal_user --email … --password … --role firm\|reviewer\|admin [--firm "…"] [--name "…"]` | Makes or updates a user |
+| `python backend\manage.py create_portal_user --email … --password … --role firm\|reviewer\|admin [--firm "…"] [--name "…"]` | Makes or updates a user (use it for the first admin; then use the **Users** page) |
 | `python backend\manage.py try_bill <bill.pdf> [--payer "…"] [--ccn …] [--drg …]` | Reads and prices one bill PDF and prints the lines, totals and flags. **It writes nothing.** Use it to test a new bill layout or a new price file. |
 | `python backend\manage.py pricing_worker` | Prices the waiting uploads; keeps running. Only needed with `MESHKOR_PRICING=worker`. More than one is safe. |
 | `python backend\manage.py pricing_worker --once` | Prices what is waiting now (also cases a server stop left in Processing), then stops |

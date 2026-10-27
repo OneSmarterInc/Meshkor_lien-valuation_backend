@@ -102,8 +102,31 @@ def payer_group_rules() -> list[tuple[re.Pattern, str]]:
     return _payer_rules
 
 
+_extra_rules: list[tuple[re.Pattern, str]] = []
+
+
+def set_extra_payer_names(pairs) -> None:
+    """Names added by a MeshKor admin (the portal's Payer names page): (name, group). Each name is matched
+    as a whole phrase in any case, and is tried before config/payer_groups.yaml."""
+    global _extra_rules
+    _extra_rules = [(re.compile(r"(?<!\w)" + re.escape(" ".join(n.split())).replace(r"\ ", r"\s+") + r"(?!\w)", re.I), g)
+                    for n, g in pairs if n and n.strip() and g]
+
+
+def payer_groups() -> list[str]:
+    """Every group named in config/payer_groups.yaml, in file order."""
+    out = []
+    for _rx, g in payer_group_rules():
+        if g not in out:
+            out.append(g)
+    return out
+
+
 def payer_group(payer: str | None, plan: str | None) -> str:
     text = f"{payer or ''} {plan or ''}"
+    for rx, grp in _extra_rules:
+        if rx.search(text):
+            return grp
     for rx, grp in payer_group_rules():
         if rx.search(text):
             return grp

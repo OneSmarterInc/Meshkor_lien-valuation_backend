@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from accounts.models import is_staff_role
+from accounts.models import is_admin_role, is_staff_role
 
 
 class IsStaffRole(BasePermission):
@@ -8,3 +8,10 @@ class IsStaffRole(BasePermission):
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_staff_role(request.user))
+
+
+class IsAdminRole(BasePermission):
+    message = "Only a MeshKor admin can do this."
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and is_admin_role(request.user))
