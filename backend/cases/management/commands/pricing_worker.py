@@ -8,7 +8,7 @@ Run it next to the web server. More than one worker is safe: each case is taken 
 import time
 
 from django.core.management.base import BaseCommand
-from django.db import close_old_connections
+from django.db import close_old_connections, connection
 
 from cases import processing
 
@@ -24,7 +24,8 @@ class Command(BaseCommand):
         self.stdout.write("Pricing worker started." + ("" if once else " Ctrl+C to stop."))
         try:
             while True:
-                close_old_connections()
+                if not connection.in_atomic_block:   # a live worker: drop a stale connection; inside a test, keep the test's
+                    close_old_connections()
                 done = 0
                 for c in processing.waiting():
                     if processing.price_waiting_case(c.pk, c.created_by_id):
